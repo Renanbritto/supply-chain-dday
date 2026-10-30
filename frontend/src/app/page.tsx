@@ -32,7 +32,6 @@ import {
   fetchGeoNetwork,
 } from "@/lib/api";
 import { fallbackData } from "@/data/fallbackData";
-import { MessageSquare } from "lucide-react";
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<NavTab>("inventory");
@@ -113,14 +112,7 @@ export default function DashboardPage() {
       {/* Área Principal de Conteúdo */}
       <div className="flex-1 flex flex-col min-w-0 pb-16">
         {/* Header Fixo */}
-        <Header
-          onOpenCopilot={() => {
-            setDiagnoseSku(null);
-            setIsCopilotOpen(true);
-          }}
-          onRefresh={loadAllData}
-          isRefreshing={refreshing}
-        />
+        <Header onRefresh={loadAllData} isRefreshing={refreshing} />
 
         <main className="max-w-7xl mx-auto px-6 pt-6 w-full space-y-6">
           {/* Cards de KPIs Principais */}
@@ -172,20 +164,6 @@ export default function DashboardPage() {
             />
           )}
         </main>
-      </div>
-
-      {/* Floating Action Button no canto inferior direito */}
-      <div className="fixed bottom-6 right-6 z-30">
-        <button
-          onClick={() => {
-            setDiagnoseSku(null);
-            setIsCopilotOpen(true);
-          }}
-          className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-medium text-xs shadow-lg hover:shadow-cyan-500/25 hover:scale-105 transition-all"
-        >
-          <MessageSquare className="h-4 w-4" />
-          <span>RN Intelligence</span>
-        </button>
       </div>
 
       {/* Drawer Lateral do RN Intelligence */}
