@@ -16,7 +16,7 @@ import {
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/components/theme/ThemeProvider";
-import { Target, AlertTriangle, ShieldCheck, Clock, Layers, MessageSquare, Filter } from "lucide-react";
+import { Target, AlertTriangle, ShieldCheck, Clock, Layers, MessageSquare, Filter, MousePointerClick, X } from "lucide-react";
 
 interface ScatterPoint {
   sku: string;
@@ -106,6 +106,23 @@ export function RiskScatterPlot({ data, onDiagnoseSku }: ScatterRiskMatrixProps)
     return STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]?.color || "#06B6D4";
   };
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "RUPTURA":
+        return <Badge variant="ruptura">RUPTURA (0 un)</Badge>;
+      case "CRITICO":
+        return <Badge variant="critico">CRITICO</Badge>;
+      case "ATENCAO":
+        return <Badge variant="atencao">ATENCAO</Badge>;
+      case "NORMAL":
+        return <Badge variant="normal">SAUDAVEL</Badge>;
+      case "EXCESSO":
+        return <Badge variant="excesso">SOBRE-ESTOQUE</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
   // Processa pontos com dispersão natural (evita sobreposição total de duplicatas) e calcula tamanho visual
   const processedPoints = useMemo(() => {
     return rawPoints.map((p, index) => {
@@ -175,10 +192,13 @@ export function RiskScatterPlot({ data, onDiagnoseSku }: ScatterRiskMatrixProps)
       CRITICO: 4,
       RUPTURA: 5, // Camada superior
     };
-    return [...filteredPoints].sort(
-      (a, b) => (priority[a.status] || 0) - (priority[b.status] || 0)
-    );
-  }, [filteredPoints]);
+    return [...filteredPoints].sort((a, b) => {
+      // Se um ponto for o selecionado, ele vai para o topo de tudo
+      if (highlightPoint?.sku === a.sku) return 1;
+      if (highlightPoint?.sku === b.sku) return -1;
+      return (priority[a.status] || 0) - (priority[b.status] || 0);
+    });
+  }, [filteredPoints, highlightPoint]);
 
   const categories = ["ALL", "Hardware", "Armazenamento", "Redes", "Audio & Video", "Perifericos", "Energia"];
 
@@ -549,15 +569,11 @@ export function RiskScatterPlot({ data, onDiagnoseSku }: ScatterRiskMatrixProps)
                           </div>
                         </div>
 
-                        {onDiagnoseSku && (
-                          <button
-                            onClick={() => onDiagnoseSku(d.sku)}
-                            className="w-full mt-2 py-1 px-2 text-[10px] rounded bg-cyan-600 hover:bg-cyan-500 text-white font-medium flex items-center justify-center gap-1 transition-colors shadow-sm"
-                          >
-                            <MessageSquare className="h-3 w-3" />
-                            <span>Diagnosticar no RN Intelligence</span>
-                          </button>
-                        )}
+                        {/* Dica de UX: Clique para fixar no painel permanente */}
+                        <div className="mt-2 pt-1.5 border-t dark:border-white/10 border-slate-200 flex items-center justify-center gap-1.5 text-[10px] text-cyan-600 dark:text-cyan-400 font-mono">
+                          <MousePointerClick className="h-3 w-3 animate-pulse" />
+                          <span>Clique no ponto para fixar diagnóstico</span>
+                        </div>
                       </div>
                     );
                   }
@@ -565,17 +581,25 @@ export function RiskScatterPlot({ data, onDiagnoseSku }: ScatterRiskMatrixProps)
                 }}
               />
 
-              <Scatter data={sortedRenderPoints} onClick={(node) => setHighlightPoint(node.payload)}>
+              <Scatter
+                data={sortedRenderPoints}
+                onClick={(node) => setHighlightPoint(node.payload as ScatterPoint)}
+              >
                 {sortedRenderPoints.map((entry, index) => {
+                  const isSelected = highlightPoint?.sku === entry.sku;
                   const isRuptura = entry.status === "RUPTURA";
                   return (
                     <Cell
                       key={`cell-${entry.sku}-${index}`}
                       fill={getColorByStatus(entry.status)}
-                      stroke={isRuptura ? "#FFFFFF" : "rgba(255,255,255,0.45)"}
-                      strokeWidth={isRuptura ? 2.2 : 0.6}
+                      stroke={isSelected ? "#00F0FF" : isRuptura ? "#FFFFFF" : "rgba(255,255,255,0.45)"}
+                      strokeWidth={isSelected ? 3.5 : isRuptura ? 2.2 : 0.6}
                       style={{
-                        filter: isRuptura ? "drop-shadow(0 0 6px rgba(255, 30, 86, 0.9))" : undefined,
+                        filter: isSelected
+                          ? "drop-shadow(0 0 10px #00F0FF)"
+                          : isRuptura
+                          ? "drop-shadow(0 0 6px rgba(255, 30, 86, 0.9))"
+                          : undefined,
                       }}
                       className="hover:scale-135 transition-transform cursor-pointer"
                     />
@@ -586,8 +610,89 @@ export function RiskScatterPlot({ data, onDiagnoseSku }: ScatterRiskMatrixProps)
           </ResponsiveContainer>
         </div>
 
+        {/* PAINEL DE INSPEÇÃO FIXO (PINNED INSPECTOR CARD): */}
+        {/* Quando o usuário clica em qualquer ponto da matriz, este card se fixa e nunca fecha com o movimento do mouse */}
+        {highlightPoint ? (
+          <div className="mt-4 p-4 rounded-xl border-2 dark:border-cyan-500/40 border-cyan-400/60 dark:bg-gradient-to-r dark:from-cyan-950/30 dark:via-obsidian-900/90 dark:to-obsidian-950 bg-gradient-to-r from-cyan-50/90 via-white to-slate-50 shadow-xl transition-all animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              {/* Informações detalhadas do SKU Selecionado */}
+              <div className="flex items-start gap-3.5 min-w-0">
+                <div className="h-11 w-11 rounded-xl bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center text-cyan-500 shrink-0 mt-0.5 shadow-sm">
+                  <Target className="h-5 w-5 animate-pulse" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-sm font-bold text-cyan-600 dark:text-cyan-400">
+                      {highlightPoint.sku}
+                    </span>
+                    <span className="text-xs font-semibold dark:text-white text-slate-900 truncate max-w-[280px]">
+                      {highlightPoint.nome}
+                    </span>
+                    {getStatusBadge(highlightPoint.status)}
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-cyan-500/10 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 font-bold">
+                      Classe {highlightPoint.classe_abc}
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-200/60 dark:bg-white/10 text-slate-700 dark:text-slate-300">
+                      {highlightPoint.quadrante_id}: {highlightPoint.quadrante_nome}
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 font-sans">
+                    <span>Categoria: <strong className="dark:text-slate-200 text-slate-700">{highlightPoint.categoria}</strong></span>
+                    <span>Fornecedor: <strong className="dark:text-slate-200 text-slate-700">{highlightPoint.fornecedor}</strong></span>
+                    <span>Lead Time: <strong className="dark:text-slate-200 text-slate-700">{highlightPoint.lead_time} dias</strong></span>
+                    <span>Giro Mensal: <strong className="dark:text-slate-200 text-slate-700">{formatCurrency(highlightPoint.faturamento_mensal)}</strong></span>
+                    <span>
+                      Estoque: <strong className={highlightPoint.capital_estoque === 0 ? "text-rose-500 font-bold" : "dark:text-slate-200 text-slate-700"}>
+                        {highlightPoint.capital_estoque === 0 ? "0 un (Ruptura)" : formatCurrency(highlightPoint.capital_estoque)}
+                      </strong>
+                    </span>
+                    {highlightPoint.sugestao_compra_qtd > 0 && (
+                      <span>
+                        Reposição Sugerida: <strong className="text-cyan-600 dark:text-cyan-400 font-mono font-bold">+{formatNumber(highlightPoint.sugestao_compra_qtd)} un ({formatCurrency(highlightPoint.sugestao_compra_valor)})</strong>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Botões de Ação Fixos */}
+              <div className="flex items-center gap-2.5 shrink-0">
+                {onDiagnoseSku && (
+                  <button
+                    onClick={() => onDiagnoseSku(highlightPoint.sku)}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-semibold text-xs flex items-center gap-2 shadow-lg shadow-cyan-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    title="Diagnosticar causa-raiz e gerar minuta no RN Intelligence"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span>Diagnosticar no RN Intelligence</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => setHighlightPoint(null)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors"
+                  title="Desmarcar SKU e fechar painel"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Dica informativa quando nenhum SKU está fixado */
+          <div className="mt-4 p-3 rounded-xl dark:bg-white/[0.02] bg-slate-50/80 border dark:border-white/5 border-slate-200 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span className="flex items-center gap-2">
+              <MousePointerClick className="h-4 w-4 text-cyan-500 animate-pulse" />
+              <span>Clique em qualquer ponto do gráfico para fixar o <strong>Painel de Inspeção</strong> e acionar o diagnóstico com IA.</span>
+            </span>
+            <span className="text-[11px] font-mono text-cyan-600 dark:text-cyan-400 hidden sm:inline">
+              Interação com 1 clique
+            </span>
+          </div>
+        )}
+
         {/* Rodapé com Insight Executivo */}
-        <div className="mt-4 p-3 rounded-lg dark:bg-obsidian-850/60 bg-slate-100/80 border dark:border-white/5 border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs dark:text-slate-400 text-slate-600 gap-2">
+        <div className="mt-3 p-3 rounded-lg dark:bg-obsidian-850/60 bg-slate-100/80 border dark:border-white/5 border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs dark:text-slate-400 text-slate-600 gap-2">
           <span>
             <strong>Interpretacao Executiva:</strong> Os pontos vermelhos representam SKUs em <strong>Ruptura Imediata</strong>. Itens em Q1 (Alto Giro & Lead Time Dilatado) exigem intervenção emergencial de compras para conter perda de faturamento.
           </span>
