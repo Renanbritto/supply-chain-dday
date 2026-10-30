@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/dashboard/Header";
+import { Sidebar, NavTab } from "@/components/dashboard/Sidebar";
 import { KpiCards } from "@/components/dashboard/KpiCards";
 import { DDayTable } from "@/components/inventory/DDayTable";
 import { AbcChart } from "@/components/dashboard/AbcChart";
@@ -14,10 +15,11 @@ import {
   fetchAbcCurve,
   fetchSuppliersSla,
 } from "@/lib/api";
-import { LayoutGrid, BarChart3, Truck, Sliders, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState<"inventory" | "abc" | "suppliers" | "whatif">("inventory");
+  const [activeTab, setActiveTab] = useState<NavTab>("inventory");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [diagnoseSku, setDiagnoseSku] = useState<string | null>(null);
 
@@ -70,105 +72,71 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-obsidian-950 text-slate-100 pb-16">
-      {/* Header Fixo */}
-      <Header
+    <div className="min-h-screen flex bg-obsidian-950 text-slate-100">
+      {/* Menu Retrátil à Esquerda */}
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed}
+        inventoryCount={inventoryItems.length}
+        suppliersCount={suppliersData.fornecedores?.length || 0}
         onOpenCopilot={() => {
           setDiagnoseSku(null);
           setIsCopilotOpen(true);
         }}
-        onRefresh={loadAllData}
-        isRefreshing={refreshing}
       />
 
-      <main className="max-w-7xl mx-auto px-6 pt-6 w-full space-y-6">
-        {/* Cards de KPIs Principais */}
-        <KpiCards summary={summary} />
+      {/* Área Principal de Conteúdo */}
+      <div className="flex-1 flex flex-col min-w-0 pb-16">
+        {/* Header Fixo */}
+        <Header
+          onOpenCopilot={() => {
+            setDiagnoseSku(null);
+            setIsCopilotOpen(true);
+          }}
+          onRefresh={loadAllData}
+          isRefreshing={refreshing}
+        />
 
-        {/* Barra de Navegação por Abas */}
-        <div className="flex border-b border-white/10 gap-2 overflow-x-auto text-xs font-medium">
-          <button
-            onClick={() => setActiveTab("inventory")}
-            className={`flex items-center gap-2 pb-3 px-3 transition-colors border-b-2 font-mono ${
-              activeTab === "inventory"
-                ? "border-cyan-400 text-cyan-400"
-                : "border-transparent text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <LayoutGrid className="h-4 w-4" />
-            <span>Painel de Ruptura & D-Day ({inventoryItems.length})</span>
-          </button>
+        <main className="max-w-7xl mx-auto px-6 pt-6 w-full space-y-6">
+          {/* Cards de KPIs Principais */}
+          <KpiCards summary={summary} />
 
-          <button
-            onClick={() => setActiveTab("abc")}
-            className={`flex items-center gap-2 pb-3 px-3 transition-colors border-b-2 font-mono ${
-              activeTab === "abc"
-                ? "border-cyan-400 text-cyan-400"
-                : "border-transparent text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <BarChart3 className="h-4 w-4" />
-            <span>Curva ABC & Pareto</span>
-          </button>
+          {/* Conteúdo Dinâmico por Aba selecionada no menu retrátil */}
+          {activeTab === "inventory" && (
+            <DDayTable
+              items={inventoryItems}
+              onDiagnoseSku={handleDiagnoseFromTable}
+              selectedCategory={selectedCategory}
+              onCategoryChange={setSelectedCategory}
+              selectedStatus={selectedStatus}
+              onStatusChange={setSelectedStatus}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+            />
+          )}
 
-          <button
-            onClick={() => setActiveTab("suppliers")}
-            className={`flex items-center gap-2 pb-3 px-3 transition-colors border-b-2 font-mono ${
-              activeTab === "suppliers"
-                ? "border-cyan-400 text-cyan-400"
-                : "border-transparent text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Truck className="h-4 w-4" />
-            <span>SLA & Fornecedores ({suppliersData.fornecedores?.length || 0})</span>
-          </button>
+          {activeTab === "abc" && <AbcChart data={abcData} />}
 
-          <button
-            onClick={() => setActiveTab("whatif")}
-            className={`flex items-center gap-2 pb-3 px-3 transition-colors border-b-2 font-mono ${
-              activeTab === "whatif"
-                ? "border-cyan-400 text-cyan-400"
-                : "border-transparent text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Sliders className="h-4 w-4" />
-            <span>Simulador What-If</span>
-          </button>
-        </div>
+          {activeTab === "suppliers" && (
+            <SuppliersTable
+              suppliers={suppliersData.fornecedores || []}
+              otifGlobal={suppliersData.otif_global || 0}
+            />
+          )}
 
-        {/* Conteúdo Dinâmico por Aba */}
-        {activeTab === "inventory" && (
-          <DDayTable
-            items={inventoryItems}
-            onDiagnoseSku={handleDiagnoseFromTable}
-            selectedCategory={selectedCategory}
-            onCategoryChange={setSelectedCategory}
-            selectedStatus={selectedStatus}
-            onStatusChange={setSelectedStatus}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-          />
-        )}
-
-        {activeTab === "abc" && <AbcChart data={abcData} />}
-
-        {activeTab === "suppliers" && (
-          <SuppliersTable
-            suppliers={suppliersData.fornecedores || []}
-            otifGlobal={suppliersData.otif_global || 0}
-          />
-        )}
-
-        {activeTab === "whatif" && (
-          <WhatIfSimulator
-            skus={inventoryItems.map((i) => ({
-              sku: i.sku,
-              nome: i.nome,
-              categoria: i.categoria,
-            }))}
-          />
-        )}
-      </main>
+          {activeTab === "whatif" && (
+            <WhatIfSimulator
+              skus={inventoryItems.map((i) => ({
+                sku: i.sku,
+                nome: i.nome,
+                categoria: i.categoria,
+              }))}
+            />
+          )}
+        </main>
+      </div>
 
       {/* Floating Action Button para o Copilot no canto inferior direito */}
       <div className="fixed bottom-6 right-6 z-30">
