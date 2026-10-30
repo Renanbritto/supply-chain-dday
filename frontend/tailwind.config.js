@@ -9,7 +9,7 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Comfortaa", "var(--font-comfortaa)", "system-ui", "sans-serif"],
+        sans: ["Comfortaa", "cursive", "sans-serif"],
       },
       colors: {
         background: "hsl(var(--background))",

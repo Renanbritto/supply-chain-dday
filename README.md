@@ -11,21 +11,27 @@ Referencia do projeto: [renannocelli.com.br/projetos/gestao-estoque](https://www
 O sistema e estruturado em quatro camadas complementares:
 
 1. **Camada de Dados (Star Schema em DuckDB)**:
+   - Base de alta densidade analitica: 120 SKUs corporativos, 61.318 movimentacoes de vendas ao longo de 180 dias, 600 posicoes de estoque distribuidas em 5 centros de distribuicao (hubs logisticos) e 42 corredores de transporte intermodal ativos.
    - Fatos: `f_estoque_diario`, `f_vendas_movimentacao`, `f_pedidos_compra`
    - Dimensoes: `d_produto`, `d_fornecedor`, `d_calendario`, `d_filial_deposito`
 2. **Motor Analitico e Regras de Negocio (Python / FastAPI)**:
    - Motor Preditivo D-Day (calculo da data limite de recompra antes de ruptura)
    - Estoque de Seguranca (SS) e Ponto de Pedido (ROP) com variabilidade de demanda e lead time
    - Estratificacao por Curva ABC multivariada (Giro, Faturamento e Margem)
+   - Matriz Estrategica de Dispersao 4 Quadrantes (Lead Time vs. Faturamento Mensal)
+   - Malha Geografica de Suprimentos com rotas intermodais e analise de capacidade de hubs
    - Indicadores de SLA e performance de fornecedores (Lead time real vs. acordado, taxa OTIF)
 3. **RN Intelligence (Camada de Copilot e Agente Analitico)**:
    - Diagnostico automatizado de causa-raiz para itens em risco de ruptura
    - Simulacao de cenarios what-if (variacao de demanda e atrasos de entrega)
    - Recomendador inteligente e geracao de minutas para pedidos de compra
-4. **Camada de Apresentacao (Next.js + shadcn/ui)**:
-   - Cockpit com indicadores executivos de ruptura, cobertura e capital imobilizado
-   - Grid dinamico para acompanhamento de D-Day e ponto de pedido
-   - Drawer retratil flutuante do RN Intelligence (Obsidian Glass UI)
+4. **Camada de Apresentacao (Next.js + shadcn/ui + Tailwind CSS)**:
+   - Navegacao executiva com Menu Retratil a esquerda
+   - Matriz de Risco 4 Quadrantes interativa com filtragem por categoria e classe ABC
+   - Mapa Geografico Interativo do Brasil com beacons pulsantes de CDs e arcos logisticos
+   - Suporte completo a Modo Escuro (Obsidian Glass) e Modo Claro
+   - Tipografia refinada Comfortaa em toda a aplicacao
+   - Drawer retratil flutuante do RN Intelligence com icone de chat
 
 ---
 
@@ -66,7 +72,9 @@ supply-chain-dday/
 │   │   │   ├── dday.py
 │   │   │   ├── abc_curve.py
 │   │   │   ├── rop.py
-│   │   │   └── sla.py
+│   │   │   ├── sla.py
+│   │   │   ├── scatter.py
+│   │   │   └── geo.py
 │   │   ├── intelligence/
 │   │   │   ├── agent.py
 │   │   │   └── tools.py
@@ -83,7 +91,13 @@ supply-chain-dday/
 │   │   │   ├── ui/
 │   │   │   ├── dashboard/
 │   │   │   ├── inventory/
+│   │   │   ├── analytics/
+│   │   │   │   ├── RiskScatterPlot.tsx
+│   │   │   │   └── GeoSupplyMap.tsx
+│   │   │   ├── theme/
 │   │   │   └── rn-intelligence/
+│   │   ├── data/
+│   │   │   └── fallbackData.ts
 │   │   └── lib/
 │   └── package.json
 └── README.md
@@ -101,43 +115,38 @@ supply-chain-dday/
 
 ## 5. Como Executar o Projeto
 
-### Backend (FastAPI + DuckDB)
+### Inicializacao Rapida (Script Unificado)
 
-1. Acesse o diretorio do backend:
-   ```bash
-   cd backend
-   ```
-2. Instale as dependencias:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Inicialize o servidor da API com recarregamento automatico:
-   ```bash
-   uvicorn app.main:app --reload --port 8000
-   ```
-   A documentacao interativa ficara disponivel em: `http://localhost:8000/docs`.
+No Windows, execute diretamente o arquivo de inicializacao:
+```bat
+start.bat
+```
 
-### Frontend (Next.js + shadcn/ui)
+### Inicializacao Manual
 
-1. Acesse o diretorio do frontend:
-   ```bash
-   cd frontend
-   ```
-2. Instale os pacotes:
-   ```bash
-   npm install
-   ```
-3. Inicie o servidor de desenvolvimento:
-   ```bash
-   npm run dev
-   ```
-   A aplicacao estara acessivel em: `http://localhost:3000`.
+#### 1. Backend (FastAPI + DuckDB)
+
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+A documentacao interativa OpenAPI ficara disponivel em `http://localhost:8000/docs`.
+
+#### 2. Frontend (Next.js + shadcn/ui)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+A aplicacao estara acessivel em `http://localhost:3000`.
 
 ---
 
 ## 6. RN Intelligence Copilot
 
-O drawer do RN Intelligence opera de forma integrada aos dados em memoria no DuckDB. Ele oferece suporte para:
-- Diagnostico instantaneo de SKUs criticos.
-- Analise de sensibilidade de compras por fornecedor.
-- Simulacoes em tempo real de alteracao de demanda sazonal.
+O assistente RN Intelligence opera de forma integrada aos dados em memoria no DuckDB. Ele oferece suporte para:
+- Diagnostico instantaneo de SKUs criticos e analise de causa-raiz.
+- Analise de sensibilidade de compras por fornecedor e lote economico.
+- Simulacoes em tempo real de cenarios what-if (variacao de demanda sazonal e atrasos logisticos).
