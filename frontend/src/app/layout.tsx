@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Comfortaa } from "next/font/google";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import "./globals.css";
 
 const comfortaa = Comfortaa({
@@ -21,8 +22,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" className={`dark ${comfortaa.variable}`}>
-      <body className={`${comfortaa.className} font-sans min-h-screen bg-obsidian-950 text-slate-100 antialiased selection:bg-cyan-500/30 selection:text-cyan-200`}>
-        {children}
+      <body className={`${comfortaa.className} font-sans min-h-screen antialiased selection:bg-cyan-500/30 selection:text-cyan-200`}>
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
