@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import { ExternalLink, RefreshCw, Layers, Github } from "lucide-react";
+import { ExternalLink, RefreshCw, Github } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { Logo } from "@/components/ui/Logo";
 
 interface HeaderProps {
   onOpenCopilot?: () => void;
@@ -16,9 +17,7 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-500 shrink-0">
-              <Layers className="h-4 w-4" />
-            </div>
+            <Logo className="h-9 w-9" showGlow />
             <div>
               <h1 className="text-xl font-bold tracking-tight dark:text-white text-slate-900 flex items-center gap-2">
                 Gestao Estrategica de Estoque & Ruptura
