@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Search, Sparkles } from "lucide-react";
+import { Search, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatNumber, formatDate } from "@/lib/utils";
 
@@ -237,7 +237,7 @@ export function DDayTable({
                       className="inline-flex items-center gap-1 text-[11px] font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 px-2.5 py-1 rounded-md border dark:border-cyan-500/20 border-cyan-300 dark:bg-cyan-500/10 bg-cyan-50 hover:bg-cyan-100 dark:hover:bg-cyan-500/20 transition-colors"
                       title="Diagnosticar causa-raiz no RN Intelligence"
                     >
-                      <Sparkles className="h-3 w-3" />
+                      <MessageSquare className="h-3 w-3" />
                       <span>Diagnosticar</span>
                     </button>
                   </td>

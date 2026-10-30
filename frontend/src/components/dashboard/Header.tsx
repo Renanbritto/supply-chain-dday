@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { MessageSquare, ExternalLink, RefreshCw, Layers } from "lucide-react";
+import { MessageSquare, ExternalLink, RefreshCw, Layers, Github } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 interface HeaderProps {
@@ -38,13 +38,15 @@ export function Header({ onOpenCopilot, onRefresh, isRefreshing }: HeaderProps) 
           <ThemeToggle />
 
           <a
-            href="https://www.renannocelli.com.br/projetos/gestao-estoque#prototipo"
+            href="https://github.com/Renanbritto/supply-chain-dday"
             target="_blank"
             rel="noopener noreferrer"
             className="hidden sm:flex items-center gap-1.5 text-xs dark:text-slate-400 text-slate-600 dark:hover:text-slate-200 hover:text-slate-900 transition-colors px-3 py-1.5 rounded-lg border dark:border-white/5 border-slate-200 dark:bg-white/5 bg-slate-100 hover:bg-slate-200/70 dark:hover:bg-white/10"
+            title="Repositório no GitHub"
           >
-            <span>Ver Portfólio</span>
-            <ExternalLink className="h-3 w-3" />
+            <Github className="h-3.5 w-3.5" />
+            <span>GitHub</span>
+            <ExternalLink className="h-3 w-3 opacity-60" />
           </a>
 
           <button

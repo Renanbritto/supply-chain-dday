@@ -16,7 +16,7 @@ import {
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/components/theme/ThemeProvider";
-import { Target, AlertTriangle, ShieldCheck, Clock, Layers, Sparkles } from "lucide-react";
+import { Target, AlertTriangle, ShieldCheck, Clock, Layers, MessageSquare } from "lucide-react";
 
 interface ScatterPoint {
   sku: string;
@@ -397,8 +397,8 @@ export function RiskScatterPlot({ data, onDiagnoseSku }: ScatterRiskMatrixProps)
                             onClick={() => onDiagnoseSku(d.sku)}
                             className="w-full mt-2 py-1 px-2 text-[10px] rounded bg-cyan-600 hover:bg-cyan-500 text-white font-medium flex items-center justify-center gap-1 transition-colors"
                           >
-                            <Sparkles className="h-3 w-3" />
-                            <span>Diagnosticar no Copilot</span>
+                            <MessageSquare className="h-3 w-3" />
+                            <span>Diagnosticar no RN Intelligence</span>
                           </button>
                         )}
                       </div>
