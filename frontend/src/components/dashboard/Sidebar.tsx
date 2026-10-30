@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import {
-  LayoutGrid,
+import { LayoutGrid,
   Target,
   MapPin,
   BarChart3,
@@ -16,6 +15,7 @@ import {
   ExternalLink,
   Sun,
   Moon,
+  Github,
 } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
 
@@ -251,13 +251,15 @@ export function Sidebar({
               </button>
 
               <a
-                href="https://www.renannocelli.com.br/projetos/gestao-estoque#prototipo"
+                href="https://github.com/Renanbritto/supply-chain-dday"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-[10px] dark:text-slate-400 text-slate-600 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+                className="flex items-center gap-1.5 text-[10px] dark:text-slate-400 text-slate-600 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+                title="Repositório no GitHub"
               >
-                <span>Portfólio</span>
-                <ExternalLink className="h-2.5 w-2.5" />
+                <Github className="h-3 w-3" />
+                <span>GitHub</span>
+                <ExternalLink className="h-2 w-2 opacity-60" />
               </a>
             </div>
           </>
