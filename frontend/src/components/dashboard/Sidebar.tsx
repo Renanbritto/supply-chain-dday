@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Logo } from "@/components/ui/Logo";
 import { LayoutGrid,
   Target,
   MapPin,
@@ -10,7 +11,6 @@ import { LayoutGrid,
   MessageSquare,
   ChevronLeft,
   ChevronRight,
-  Layers,
   Database,
   ExternalLink,
   Sun,
@@ -97,9 +97,7 @@ export function Sidebar({
       <div className="h-16 border-b dark:border-white/10 border-slate-200/80 px-4 flex items-center justify-between gap-3">
         {!isCollapsed && (
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="h-8 w-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-500 shrink-0">
-              <Layers className="h-4 w-4" />
-            </div>
+            <Logo className="h-8 w-8" showGlow />
             <div className="flex flex-col min-w-0">
               <span className="text-xs font-bold font-mono tracking-wider uppercase dark:text-white text-slate-900 truncate">
                 D-Day Engine
@@ -113,9 +111,7 @@ export function Sidebar({
 
         {isCollapsed && (
           <div className="mx-auto">
-            <div className="h-8 w-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-500">
-              <Layers className="h-4 w-4" />
-            </div>
+            <Logo className="h-8 w-8" showGlow />
           </div>
         )}
 
