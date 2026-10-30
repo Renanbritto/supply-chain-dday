@@ -10,7 +10,19 @@ import { SuppliersTable } from "@/components/dashboard/SuppliersTable";
 import { WhatIfSimulator } from "@/components/dashboard/WhatIfSimulator";
 import { CopilotDrawer } from "@/components/rn-intelligence/CopilotDrawer";
 import { RiskScatterPlot } from "@/components/analytics/RiskScatterPlot";
-import { GeoSupplyMap } from "@/components/analytics/GeoSupplyMap";
+import dynamic from "next/dynamic";
+
+const GeoSupplyMap = dynamic(
+  () => import("@/components/analytics/GeoSupplyMap").then((m) => m.GeoSupplyMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="obsidian-card p-12 rounded-xl text-center text-xs dark:text-slate-400 text-slate-500 font-mono">
+        Carregando mapa logistico interativo do Brasil...
+      </div>
+    ),
+  }
+);
 import {
   fetchSummary,
   fetchInventory,

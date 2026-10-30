@@ -1,10 +1,23 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Navigation, Truck, Plane, Ship, ShieldCheck, AlertTriangle, ArrowRight, Building2, Package } from "lucide-react";
+import {
+  MapPin,
+  Truck,
+  Plane,
+  Ship,
+  Building2,
+  Package,
+  RotateCcw,
+  ArrowRight,
+  ShieldCheck,
+  AlertTriangle,
+  ZoomIn,
+} from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
+import "leaflet/dist/leaflet.css";
 
 interface Hub {
   id: string;
@@ -79,7 +92,14 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
   const { theme } = useTheme();
   const [selectedHub, setSelectedHub] = useState<string>("ALL");
   const [selectedModal, setSelectedModal] = useState<string>("ALL");
-  const [activeHoverNode, setActiveHoverNode] = useState<any>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
+  const [activeRouteInfo, setActiveRouteInfo] = useState<Rota | null>(null);
+
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const tileLayerRef = useRef<any>(null);
+  const markersLayerRef = useRef<any>(null);
+  const polylinesLayerRef = useRef<any>(null);
 
   const hubs = data?.hubs || [];
   const fornecedores = data?.fornecedores || [];
@@ -92,27 +112,11 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
     valor_total_transito: 3450000.0,
   };
 
-  // Funcao de Projecao de Coordenadas para SVG (Brasil Mercator ajustado)
-  // Longitude: -74 (Oeste AM/AC) a -34 (Leste RN/PB) -> delta 40
-  // Latitude: 5.2 (Norte RR/AP) a -33.7 (Sul RS) -> delta 38.9
-  const projectCoordinates = (lat: number, lng: number) => {
-    const minLng = -73.5;
-    const maxLng = -34.0;
-    const maxLat = 5.2;
-    const minLat = -33.5;
-
-    const width = 760;
-    const height = 580;
-
-    const x = ((lng - minLng) / (maxLng - minLng)) * width + 20;
-    const y = ((maxLat - lat) / (maxLat - minLat)) * height + 20;
-    return { x, y };
-  };
-
-  // Filtra rotas com base nos filtros
+  // Filtragem estrita dos corredores
   const filteredRotas = rotas.filter((r) => {
     if (selectedHub !== "ALL" && r.filial_id !== selectedHub) return false;
     if (selectedModal !== "ALL" && !r.modal.toLowerCase().includes(selectedModal.toLowerCase())) return false;
+    if (selectedStatus !== "ALL" && r.status_rota !== selectedStatus) return false;
     return true;
   });
 
@@ -129,13 +133,217 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
       case "DELAYED":
         return "#F59E0B"; // Ambar
       default:
-        return "#06B6D4"; // Ciano
+        return "#10B981"; // Verde esmeralda (No prazo)
+    }
+  };
+
+  // Inicializacao do Leaflet (Somente no Client)
+  useEffect(() => {
+    let isMounted = true;
+
+    async function initLeaflet() {
+      if (typeof window === "undefined" || !mapContainerRef.current) return;
+      const L = (await import("leaflet")).default;
+
+      if (!mapInstanceRef.current && mapContainerRef.current) {
+        // Centro Geografico do Brasil
+        const map = L.map(mapContainerRef.current, {
+          center: [-14.5, -53.0],
+          zoom: 4,
+          minZoom: 3,
+          maxZoom: 12,
+          scrollWheelZoom: true,
+          zoomControl: true,
+        });
+
+        const tileUrl =
+          theme === "dark"
+            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+
+        const tileLayer = L.tileLayer(tileUrl, {
+          attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          subdomains: "abcd",
+          maxZoom: 19,
+        }).addTo(map);
+
+        tileLayerRef.current = tileLayer;
+        markersLayerRef.current = L.layerGroup().addTo(map);
+        polylinesLayerRef.current = L.layerGroup().addTo(map);
+        mapInstanceRef.current = map;
+      }
+
+      if (isMounted) {
+        renderMapFeatures(L);
+      }
+    }
+
+    initLeaflet();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Atualiza TileLayer quando o tema escuro/claro muda
+  useEffect(() => {
+    if (!mapInstanceRef.current || !tileLayerRef.current) return;
+    const tileUrl =
+      theme === "dark"
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+
+    tileLayerRef.current.setUrl(tileUrl);
+  }, [theme]);
+
+  // Atualiza Marcadores e Rotas ao mudar filtros
+  useEffect(() => {
+    async function updateFeatures() {
+      if (typeof window === "undefined" || !mapInstanceRef.current) return;
+      const L = (await import("leaflet")).default;
+      renderMapFeatures(L);
+    }
+    updateFeatures();
+  }, [selectedHub, selectedModal, selectedStatus, filteredRotas.length]);
+
+  const renderMapFeatures = (L: any) => {
+    const map = mapInstanceRef.current;
+    if (!map || !markersLayerRef.current || !polylinesLayerRef.current) return;
+
+    markersLayerRef.current.clearLayers();
+    polylinesLayerRef.current.clearLayers();
+
+    // 1. Renderiza Rotas (Polilinhas)
+    filteredRotas.forEach((rota) => {
+      const color = getRouteColor(rota.status_rota);
+      const isSelected = activeRouteInfo?.rota_id === rota.rota_id;
+
+      const polyline = L.polyline(
+        [
+          [rota.origem.lat, rota.origem.lng],
+          [rota.destino.lat, rota.destino.lng],
+        ],
+        {
+          color,
+          weight: isSelected ? 4.5 : Math.min(3.5, Math.max(1.8, rota.volume_unidades / 400)),
+          opacity: isSelected ? 1 : 0.65,
+          dashArray: rota.modal === "AEREO" ? "6, 6" : rota.modal === "CABOTAGEM" ? "8, 4" : undefined,
+        }
+      );
+
+      polyline.bindTooltip(
+        `
+        <div style="font-family:'Comfortaa', sans-serif; padding:2px; font-size:11px;">
+          <div style="font-weight:700; color:#06B6D4;">${rota.rota_id} • ${rota.modal}</div>
+          <div style="margin-top:2px;"><strong>Origem:</strong> ${rota.fornecedor_nome} (${rota.origem.cidade}/${rota.origem.estado})</div>
+          <div><strong>Destino:</strong> ${rota.filial_nome}</div>
+          <div style="margin-top:2px;"><strong>Carga:</strong> ${formatNumber(rota.volume_unidades)} un (${formatCurrency(rota.valor_carga)})</div>
+          <div style="color:${color}; font-weight:700; margin-top:2px;">Status: ${rota.status_rota} (${rota.dias_em_transito} dias em transito)</div>
+        </div>
+        `,
+        { sticky: true }
+      );
+
+      polyline.on("click", () => {
+        setActiveRouteInfo(rota);
+      });
+
+      polyline.addTo(polylinesLayerRef.current);
+    });
+
+    // 2. Renderiza Fabricas / Fornecedores
+    fornecedores.forEach((forn) => {
+      const isDark = theme === "dark";
+      const factoryIcon = L.divIcon({
+        className: "custom-factory-marker",
+        html: `
+          <div style="display:flex; flex-direction:column; align-items:center; transform: translate(-50%, -100%);">
+            <div style="background:${isDark ? "#1E293B" : "#F8FAFC"}; color:${isDark ? "#CBD5E1" : "#334155"}; border:1px solid #3B82F6; border-radius:4px; padding:2px 5px; font-weight:600; font-size:9px; font-family:monospace; box-shadow:0 2px 6px rgba(0,0,0,0.3); white-space:nowrap;">
+              ${forn.cidade}/${forn.estado}
+            </div>
+            <div style="width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; border-top:4px solid #3B82F6;"></div>
+          </div>
+        `,
+        iconSize: [0, 0],
+      });
+
+      const marker = L.marker([forn.lat, forn.lng], { icon: factoryIcon });
+      marker.bindTooltip(
+        `
+        <div style="font-family:'Comfortaa', sans-serif; font-size:11px;">
+          <div style="font-weight:700; color:#3B82F6;">${forn.nome}</div>
+          <div>${forn.cidade}/${forn.estado} • ${forn.categoria}</div>
+          <div>Lead time acordado: ${forn.lead_time_acordado} dias</div>
+          <div>Confiabilidade SLA: ${forn.confianca_pct}%</div>
+        </div>
+        `
+      );
+      marker.addTo(markersLayerRef.current);
+    });
+
+    // 3. Renderiza Centros de Distribuicao (Hubs)
+    hubs.forEach((hub) => {
+      const isDark = theme === "dark";
+      const isSelected = selectedHub === hub.id;
+
+      const hubIcon = L.divIcon({
+        className: "custom-hub-marker",
+        html: `
+          <div style="display:flex; flex-direction:column; align-items:center; transform: translate(-50%, -100%); cursor:pointer;">
+            <div style="background:${isDark ? (isSelected ? "#083344" : "#0F172A") : (isSelected ? "#E0F2FE" : "#FFFFFF")}; color:${isDark ? "#FFFFFF" : "#0F172A"}; border:2px solid ${isSelected ? "#38BDF8" : "#06B6D4"}; border-radius:6px; padding:3px 7px; font-weight:700; font-size:11px; font-family:monospace; box-shadow:0 4px 14px rgba(6,182,212,0.4); display:flex; align-items:center; gap:5px; white-space:nowrap;">
+              <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:${hub.rupturas_locais > 0 ? '#EF4444' : '#10B981'};"></span>
+              ${hub.id}
+            </div>
+            <div style="width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-top:6px solid #06B6D4;"></div>
+          </div>
+        `,
+        iconSize: [0, 0],
+      });
+
+      const marker = L.marker([hub.lat, hub.lng], { icon: hubIcon });
+      marker.bindPopup(
+        `
+        <div style="font-family:'Comfortaa', sans-serif; min-width:210px; padding:2px;">
+          <div style="font-weight:700; font-size:13px; color:#06B6D4; margin-bottom:2px;">${hub.nome}</div>
+          <div style="font-size:11px; color:#64748B; margin-bottom:6px;">${hub.cidade} - ${hub.estado}</div>
+          <div style="font-size:11px; margin-bottom:3px;"><strong>Ocupacao:</strong> ${hub.paletes_ocupados.toLocaleString('pt-BR')} / ${hub.capacidade_paletes.toLocaleString('pt-BR')} paletes (${hub.ocupacao_pct}%)</div>
+          <div style="font-size:11px; margin-bottom:3px;"><strong>SKUs Ativos:</strong> ${hub.total_skus}</div>
+          <div style="font-size:11px; margin-bottom:3px;"><strong>Capital em Estoque:</strong> R$ ${hub.capital_estoque.toLocaleString('pt-BR', {minimumFractionDigits:2})}</div>
+          <div style="font-size:11px; color:${hub.rupturas_locais > 0 ? '#EF4444' : '#10B981'}; font-weight:600; margin-top:4px;">
+            ${hub.rupturas_locais > 0 ? `${hub.rupturas_locais} rupturas registradas` : 'Sem rupturas ativas'}
+          </div>
+        </div>
+        `
+      );
+
+      marker.on("click", () => {
+        setSelectedHub(hub.id);
+      });
+
+      marker.addTo(markersLayerRef.current);
+    });
+  };
+
+  const handleResetView = () => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo([-14.5, -53.0], 4, { duration: 1.2 });
+      setSelectedHub("ALL");
+      setSelectedModal("ALL");
+      setSelectedStatus("ALL");
+      setActiveRouteInfo(null);
+    }
+  };
+
+  const handleFocusHub = (hub: Hub) => {
+    setSelectedHub(hub.id);
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo([hub.lat, hub.lng], 6, { duration: 1 });
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Banner de Metricas da Malha Logistica */}
+      {/* Banner Superior de Indicadores da Malha */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="obsidian-card p-4 rounded-xl">
           <span className="text-[11px] font-mono dark:text-slate-400 text-slate-500 uppercase">
@@ -201,28 +409,29 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
         </div>
       </div>
 
-      {/* Container Principal do Mapa e Painel Lateral */}
+      {/* Grid Principal do Mapa Interativo Leaflet */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Mapa SVG Georreferenciado */}
+        {/* Painel do Mapa */}
         <div className="lg:col-span-3 obsidian-card p-5 rounded-xl relative overflow-hidden transition-all flex flex-col justify-between">
-          {/* Header do Mapa e Filtros */}
+          {/* Header de Filtros Operacionais */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b dark:border-white/10 border-slate-200 z-10">
             <div>
               <h3 className="text-sm font-bold dark:text-white text-slate-900 flex items-center gap-2">
-                Malha Geografica de Suprimentos & Rotas Interestaduais
+                <MapPin className="h-4 w-4 text-cyan-500" />
+                Malha Geografica de Suprimentos Brasil
               </h3>
               <p className="text-xs dark:text-slate-400 text-slate-500">
-                Visualizacao em tempo real de fluxos fabris e recebimento fisico nos centros de distribuicao
+                Visualizacao geografica real de corredores de carga interestaduais e centros de distribuicao
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <select
                 value={selectedHub}
                 onChange={(e) => setSelectedHub(e.target.value)}
                 className="text-xs py-1.5 px-2.5 rounded-lg dark:bg-obsidian-850 bg-white border dark:border-white/10 border-slate-300 dark:text-slate-300 text-slate-700 focus:outline-none"
               >
-                <option value="ALL">Todos os Hubs Destino</option>
+                <option value="ALL">Todos os Hubs</option>
                 {hubs.map((h) => (
                   <option key={h.id} value={h.id}>
                     {h.nome} ({h.estado})
@@ -240,243 +449,74 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
                 <option value="Aereo">Aereo Cargo</option>
                 <option value="Cabotagem">Cabotagem Maritima</option>
               </select>
+
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="text-xs py-1.5 px-2.5 rounded-lg dark:bg-obsidian-850 bg-white border dark:border-white/10 border-slate-300 dark:text-slate-300 text-slate-700 focus:outline-none"
+              >
+                <option value="ALL">Todos os Status</option>
+                <option value="ON_TIME">No Prazo</option>
+                <option value="DELAYED">Atraso Moderado</option>
+                <option value="CRITICAL">Atraso Critico</option>
+              </select>
+
+              <button
+                onClick={handleResetView}
+                className="flex items-center gap-1 text-xs py-1.5 px-3 rounded-lg dark:bg-obsidian-850 bg-slate-100 hover:bg-slate-200 dark:hover:bg-obsidian-800 border dark:border-white/10 border-slate-300 transition-colors dark:text-slate-300 text-slate-700"
+                title="Resetar visao para o Brasil"
+              >
+                <RotateCcw className="h-3 w-3" />
+                <span className="hidden sm:inline">Visao Brasil</span>
+              </button>
             </div>
           </div>
 
-          {/* SVG Map Canvas */}
-          <div className="w-full relative h-[480px] my-2 select-none">
-            <svg
-              viewBox="0 0 800 620"
-              className="w-full h-full"
-              style={{ filter: "drop-shadow(0 4px 20px rgba(0,0,0,0.15))" }}
-            >
-              {/* Contorno Silhueta Estilizada do Brasil */}
-              <path
-                d="M 120 110 L 260 70 L 380 90 L 460 75 L 530 110 L 610 130 L 710 180 L 740 220 L 720 270 L 660 300 L 630 350 L 590 380 L 580 430 L 530 480 L 480 540 L 450 610 L 410 600 L 410 530 L 370 480 L 320 440 L 280 410 L 230 390 L 160 360 L 120 320 L 90 260 L 80 200 Z"
-                fill={theme === "dark" ? "rgba(14, 20, 34, 0.7)" : "rgba(241, 245, 249, 0.8)"}
-                stroke={theme === "dark" ? "rgba(6, 182, 212, 0.25)" : "rgba(203, 213, 225, 0.9)"}
-                strokeWidth={1.5}
-                strokeDasharray="4 2"
-              />
-
-              {/* Grade de Meridianos / Paralelos Sutis */}
-              <line x1="20" y1="200" x2="780" y2="200" stroke={theme === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)"} strokeDasharray="3 3" />
-              <line x1="20" y1="400" x2="780" y2="400" stroke={theme === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)"} strokeDasharray="3 3" />
-              <line x1="300" y1="20" x2="300" y2="600" stroke={theme === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)"} strokeDasharray="3 3" />
-              <line x1="550" y1="20" x2="550" y2="600" stroke={theme === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)"} strokeDasharray="3 3" />
-
-              {/* Corredores Logísticos / Arcos de Carga */}
-              {filteredRotas.map((rota) => {
-                const orig = projectCoordinates(rota.origem.lat, rota.origem.lng);
-                const dest = projectCoordinates(rota.destino.lat, rota.destino.lng);
-                const color = getRouteColor(rota.status_rota);
-
-                // Ponto de Controle Bezier curvado para dar profundidade estética
-                const dx = dest.x - orig.x;
-                const dy = dest.y - orig.y;
-                const cx = (orig.x + dest.x) / 2 - dy * 0.15;
-                const cy = (orig.y + dest.y) / 2 + dx * 0.15;
-
-                return (
-                  <g key={rota.rota_id} className="cursor-pointer group" onMouseEnter={() => setActiveHoverNode({ type: "ROTA", data: rota })}>
-                    <path
-                      d={`M ${orig.x} ${orig.y} Q ${cx} ${cy} ${dest.x} ${dest.y}`}
-                      fill="none"
-                      stroke={color}
-                      strokeWidth={Math.min(3.5, Math.max(1.2, rota.volume_unidades / 400))}
-                      strokeOpacity={0.65}
-                      className="group-hover:stroke-opacity-100 group-hover:stroke-white transition-all"
-                    />
-                    {/* Partícula de Fluxo em Trânsito */}
-                    <circle
-                      cx={(orig.x + dest.x) / 2}
-                      cy={(orig.y + dest.y) / 2}
-                      r={2}
-                      fill={color}
-                      className="animate-ping"
-                    />
-                  </g>
-                );
-              })}
-
-              {/* Fornecedores / Fábricas */}
-              {fornecedores.map((forn) => {
-                const pos = projectCoordinates(forn.lat, forn.lng);
-                return (
-                  <g
-                    key={forn.id}
-                    transform={`translate(${pos.x}, ${pos.y})`}
-                    className="cursor-pointer group"
-                    onMouseEnter={() => setActiveHoverNode({ type: "FORNECEDOR", data: forn })}
-                  >
-                    <rect
-                      x="-5"
-                      y="-5"
-                      width="10"
-                      height="10"
-                      rx="2"
-                      fill="#3B82F6"
-                      stroke="#FFFFFF"
-                      strokeWidth="1.5"
-                      className="group-hover:scale-125 transition-transform"
-                    />
-                    <text
-                      x="8"
-                      y="3"
-                      fontSize="9"
-                      fill={theme === "dark" ? "#94A3B8" : "#475569"}
-                      fontFamily="monospace"
-                      className="opacity-75 group-hover:opacity-100 transition-opacity select-none font-semibold"
-                    >
-                      {forn.cidade}/{forn.estado}
-                    </text>
-                  </g>
-                );
-              })}
-
-              {/* Centros de Distribuição (Hubs) com Glow e Balizas Pulsantes */}
-              {hubs.map((hub) => {
-                const pos = projectCoordinates(hub.lat, hub.lng);
-                return (
-                  <g
-                    key={hub.id}
-                    transform={`translate(${pos.x}, ${pos.y})`}
-                    className="cursor-pointer group"
-                    onClick={() => setSelectedHub(hub.id)}
-                    onMouseEnter={() => setActiveHoverNode({ type: "HUB", data: hub })}
-                  >
-                    {/* Anel Pulsante */}
-                    <circle r="14" fill="rgba(6, 182, 212, 0.25)" className="animate-ping" />
-                    <circle r="10" fill="rgba(6, 182, 212, 0.4)" />
-                    <circle r="6" fill="#06B6D4" stroke="#FFFFFF" strokeWidth="2" className="group-hover:scale-125 transition-transform" />
-                    
-                    <text
-                      x="14"
-                      y="-4"
-                      fontSize="10"
-                      fill={theme === "dark" ? "#FFFFFF" : "#0F172A"}
-                      fontFamily="Comfortaa"
-                      fontWeight="bold"
-                      className="select-none"
-                    >
-                      {hub.id}
-                    </text>
-                    <text
-                      x="14"
-                      y="8"
-                      fontSize="8"
-                      fill="#06B6D4"
-                      fontFamily="monospace"
-                      className="select-none"
-                    >
-                      {hub.cidade} ({hub.ocupacao_pct}%)
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-
-            {/* Tooltip Dinâmico Flutuante */}
-            {activeHoverNode && (
-              <div className="absolute bottom-3 left-3 obsidian-drawer p-3 rounded-lg border dark:border-white/10 border-slate-200 text-xs shadow-xl max-w-[260px] pointer-events-none z-20">
-                {activeHoverNode.type === "HUB" && (
-                  <div>
-                    <div className="font-bold text-cyan-500 font-mono flex items-center justify-between">
-                      <span>{activeHoverNode.data.nome}</span>
-                      <span className="text-[10px] text-emerald-500 font-bold">{activeHoverNode.data.ocupacao_pct}% cap</span>
-                    </div>
-                    <div className="text-[11px] dark:text-slate-300 text-slate-700 mt-1">
-                      {activeHoverNode.data.cidade} - {activeHoverNode.data.estado}
-                    </div>
-                    <div className="text-[10px] text-slate-400 mt-1">
-                      Estoque: {formatCurrency(activeHoverNode.data.capital_estoque)} | {activeHoverNode.data.total_skus} SKUs
-                    </div>
-                    <div className="text-[10px] text-red-500 font-semibold mt-0.5">
-                      Rupturas locais: {activeHoverNode.data.rupturas_locais} SKUs zerados
-                    </div>
-                  </div>
-                )}
-
-                {activeHoverNode.type === "FORNECEDOR" && (
-                  <div>
-                    <div className="font-bold text-blue-500 font-mono">
-                      {activeHoverNode.data.nome}
-                    </div>
-                    <div className="text-[11px] dark:text-slate-300 text-slate-700 mt-1">
-                      {activeHoverNode.data.cidade} - {activeHoverNode.data.estado} ({activeHoverNode.data.categoria})
-                    </div>
-                    <div className="text-[10px] text-slate-400 mt-1">
-                      Lead Time: {activeHoverNode.data.lead_time_acordado}d | Confianca SLA: {activeHoverNode.data.confianca_pct}%
-                    </div>
-                    <div className="text-[10px] text-cyan-500 font-medium mt-0.5">
-                      {activeHoverNode.data.remessas_em_transito} pedidos em rota de entrega
-                    </div>
-                  </div>
-                )}
-
-                {activeHoverNode.type === "ROTA" && (
-                  <div>
-                    <div className="font-bold text-cyan-500 font-mono flex items-center justify-between">
-                      <span>{activeHoverNode.data.rota_id}</span>
-                      <span className="text-[10px] text-slate-400">{activeHoverNode.data.modal}</span>
-                    </div>
-                    <div className="text-[11px] dark:text-slate-200 text-slate-800 font-medium mt-1 flex items-center gap-1">
-                      <span>{activeHoverNode.data.origem.cidade}</span>
-                      <ArrowRight className="h-3 w-3 text-cyan-500" />
-                      <span>{activeHoverNode.data.destino.cidade}</span>
-                    </div>
-                    <div className="text-[10px] text-slate-400 mt-1">
-                      Carga: {formatNumber(activeHoverNode.data.volume_unidades)} un ({formatCurrency(activeHoverNode.data.valor_carga)})
-                    </div>
-                    <div className="text-[10px] text-amber-500 font-semibold mt-0.5">
-                      Tempo na rota: {activeHoverNode.data.dias_em_transito} dias ({activeHoverNode.data.status_rota})
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+          {/* Container do Mapa Real Leaflet */}
+          <div className="w-full h-[500px] my-3 rounded-lg overflow-hidden border dark:border-white/10 border-slate-200 relative z-0">
+            <div ref={mapContainerRef} className="w-full h-full" />
           </div>
 
-          {/* Legenda do Mapa */}
+          {/* Legenda Informativa Limpa (Sem bolinhas de animacao) */}
           <div className="flex flex-wrap items-center justify-between text-[11px] font-mono dark:text-slate-400 text-slate-600 pt-3 border-t dark:border-white/10 border-slate-200">
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5">
-                <span className="h-3 w-3 rounded-full bg-cyan-500" /> Centro de Distribuicao (Hub)
+                <span className="h-3 w-3 rounded-sm bg-cyan-500" /> Centros de Distribuicao (Hubs)
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-sm bg-blue-500" /> Fabrica Fornecedor
+                <span className="h-2.5 w-2.5 rounded-sm bg-blue-500" /> Polos Fabris / Fornecedores
               </span>
             </div>
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1.5">
-                <span className="h-0.5 w-4 bg-cyan-400" /> No Prazo
+                <span className="h-1 w-4 rounded-full bg-emerald-500" /> No Prazo
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-0.5 w-4 bg-amber-400" /> Atraso Moderado
+                <span className="h-1 w-4 rounded-full bg-amber-500" /> Atraso Moderado
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-0.5 w-4 bg-red-400" /> Atraso Critico
+                <span className="h-1 w-4 rounded-full bg-rose-500" /> Atraso Critico
               </span>
             </div>
           </div>
         </div>
 
-        {/* Painel Lateral de Detalhes dos Hubs e Corredores */}
+        {/* Painel Lateral: Hubs & Corredores */}
         <div className="space-y-4">
           <div className="obsidian-card p-4 rounded-xl">
             <h4 className="text-xs font-mono uppercase text-cyan-600 dark:text-cyan-400 font-bold mb-3 flex items-center gap-1.5">
               <Building2 className="h-4 w-4" />
-              Centros de Distribuicao (5 Hubs)
+              Centros de Distribuicao ({hubs.length} Hubs)
             </h4>
 
             <div className="space-y-2.5">
               {hubs.map((hub) => (
                 <div
                   key={hub.id}
-                  onClick={() => setSelectedHub(hub.id === selectedHub ? "ALL" : hub.id)}
+                  onClick={() => handleFocusHub(hub)}
                   className={`p-2.5 rounded-lg border transition-all cursor-pointer ${
                     selectedHub === hub.id
-                      ? "dark:bg-cyan-500/15 bg-cyan-50 border-cyan-400"
+                      ? "dark:bg-cyan-500/15 bg-cyan-50 border-cyan-400 shadow-sm"
                       : "dark:bg-obsidian-850 bg-slate-100 dark:border-white/5 border-slate-200 hover:border-cyan-500/40"
                   }`}
                 >
@@ -484,7 +524,7 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
                     <span className="font-semibold dark:text-white text-slate-900 font-mono">
                       {hub.id} - {hub.cidade}
                     </span>
-                    <span className="font-mono text-[10px] text-cyan-500">
+                    <span className="font-mono text-[10px] text-cyan-500 font-bold">
                       {hub.ocupacao_pct}% paletes
                     </span>
                   </div>
@@ -497,9 +537,9 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
                     />
                   </div>
                   <div className="flex justify-between items-center text-[10px] text-slate-400 mt-1 font-mono">
-                    <span>{hub.total_skus} SKUs</span>
+                    <span>{hub.total_skus} SKUs • {formatCurrency(hub.capital_estoque)}</span>
                     <span className={hub.rupturas_locais > 0 ? "text-red-500 font-semibold" : "text-emerald-500"}>
-                      {hub.rupturas_locais > 0 ? `${hub.rupturas_locais} rupturas` : "0 faltas"}
+                      {hub.rupturas_locais > 0 ? `${hub.rupturas_locais} rupturas` : "0 rupturas"}
                     </span>
                   </div>
                 </div>
@@ -513,12 +553,33 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
               Corredores em Transito ({filteredRotas.length})
             </h4>
 
-            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-              {filteredRotas.slice(0, 6).map((rota) => (
-                <div key={rota.rota_id} className="p-2 rounded-lg dark:bg-obsidian-850 bg-slate-100 text-[11px] border dark:border-white/5 border-slate-200">
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {filteredRotas.slice(0, 8).map((rota) => (
+                <div
+                  key={rota.rota_id}
+                  onClick={() => {
+                    setActiveRouteInfo(rota);
+                    if (mapInstanceRef.current) {
+                      mapInstanceRef.current.flyTo([(rota.origem.lat + rota.destino.lat) / 2, (rota.origem.lng + rota.destino.lng) / 2], 5);
+                    }
+                  }}
+                  className={`p-2 rounded-lg text-[11px] border transition-all cursor-pointer ${
+                    activeRouteInfo?.rota_id === rota.rota_id
+                      ? "dark:bg-cyan-500/15 bg-cyan-50 border-cyan-400"
+                      : "dark:bg-obsidian-850 bg-slate-100 dark:border-white/5 border-slate-200 hover:border-cyan-500/30"
+                  }`}
+                >
                   <div className="flex items-center justify-between font-mono">
                     <span className="dark:text-white text-slate-900 font-bold">{rota.rota_id}</span>
-                    <span className={`text-[10px] font-bold ${rota.status_rota === "CRITICAL" ? "text-red-500" : rota.status_rota === "DELAYED" ? "text-amber-500" : "text-emerald-500"}`}>
+                    <span
+                      className={`text-[10px] font-bold ${
+                        rota.status_rota === "CRITICAL"
+                          ? "text-red-500"
+                          : rota.status_rota === "DELAYED"
+                          ? "text-amber-500"
+                          : "text-emerald-500"
+                      }`}
+                    >
                       {rota.status_rota}
                     </span>
                   </div>
@@ -541,4 +602,3 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
     </div>
   );
 }
-
