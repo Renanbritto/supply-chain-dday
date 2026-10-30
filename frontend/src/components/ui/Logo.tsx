@@ -88,3 +88,4 @@ export function Logo({ className = "h-8 w-8", showGlow = false }: LogoProps) {
     </div>
   );
 }
+
