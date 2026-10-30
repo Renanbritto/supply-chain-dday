@@ -3,6 +3,8 @@
 import React from "react";
 import {
   LayoutGrid,
+  Target,
+  MapPin,
   BarChart3,
   Truck,
   Sliders,
@@ -17,7 +19,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
 
-export type NavTab = "inventory" | "abc" | "suppliers" | "whatif";
+export type NavTab = "inventory" | "scatter" | "geo" | "abc" | "suppliers" | "whatif";
 
 interface SidebarProps {
   activeTab: NavTab;
@@ -47,6 +49,20 @@ export function Sidebar({
       shortLabel: "D-Day",
       icon: LayoutGrid,
       count: inventoryCount,
+    },
+    {
+      id: "scatter" as NavTab,
+      label: "Matriz de Dispersao 4Q",
+      shortLabel: "Dispersao",
+      icon: Target,
+      count: 120,
+    },
+    {
+      id: "geo" as NavTab,
+      label: "Malha Geografica & Rotas",
+      shortLabel: "Malha Geo",
+      icon: MapPin,
+      count: 5,
     },
     {
       id: "abc" as NavTab,
@@ -120,13 +136,13 @@ export function Sidebar({
 
       {/* Navigation Label */}
       {!isCollapsed && (
-        <div className="px-4 pt-5 pb-2 text-[10px] font-mono uppercase tracking-wider dark:text-slate-500 text-slate-400 font-semibold">
+        <div className="px-4 pt-4 pb-2 text-[10px] font-mono uppercase tracking-wider dark:text-slate-500 text-slate-400 font-semibold">
           Navegacao Analitica
         </div>
       )}
 
       {/* Navigation Links */}
-      <nav className="flex-1 px-2.5 py-2 space-y-1.5 overflow-y-auto">
+      <nav className="flex-1 px-2.5 py-1.5 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -135,14 +151,14 @@ export function Sidebar({
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all group relative ${
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all group relative ${
                 isActive
                   ? "dark:bg-cyan-500/15 bg-cyan-50/90 dark:border-cyan-500/30 border-cyan-300 dark:text-cyan-300 text-cyan-800 shadow-[0_0_15px_rgba(6,182,212,0.15)] font-semibold border"
                   : "dark:text-slate-400 text-slate-600 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.04] border border-transparent"
               } ${isCollapsed ? "justify-center" : "justify-between"}`}
               title={isCollapsed ? item.label : undefined}
             >
-              <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <Icon
                   className={`h-4 w-4 shrink-0 transition-transform group-hover:scale-110 ${
                     isActive ? "text-cyan-500" : "dark:text-slate-400 text-slate-500 group-hover:text-slate-900 dark:group-hover:text-slate-200"
@@ -155,7 +171,7 @@ export function Sidebar({
 
               {!isCollapsed && item.count !== null && (
                 <span
-                  className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
+                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
                     isActive
                       ? "dark:bg-cyan-400/20 bg-cyan-200/60 dark:text-cyan-200 text-cyan-900 border dark:border-cyan-400/30 border-cyan-300"
                       : "dark:bg-obsidian-850 bg-slate-100 dark:text-slate-400 text-slate-600 border dark:border-white/5 border-slate-200"
@@ -174,19 +190,19 @@ export function Sidebar({
         })}
 
         {/* Divisor */}
-        <div className="pt-3 pb-1">
+        <div className="pt-2 pb-1">
           <div className="h-px dark:bg-white/10 bg-slate-200" />
         </div>
 
         {/* Atalho RN Intelligence */}
         <button
           onClick={onOpenCopilot}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all group relative dark:bg-gradient-to-r dark:from-cyan-500/10 dark:via-blue-500/10 dark:to-transparent bg-cyan-50/80 border dark:border-cyan-500/30 border-cyan-200 hover:border-cyan-400/60 dark:text-slate-200 text-slate-800 hover:text-slate-900 ${
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all group relative dark:bg-gradient-to-r dark:from-cyan-500/10 dark:via-blue-500/10 dark:to-transparent bg-cyan-50/80 border dark:border-cyan-500/30 border-cyan-200 hover:border-cyan-400/60 dark:text-slate-200 text-slate-800 hover:text-slate-900 ${
             isCollapsed ? "justify-center" : "justify-between"
           }`}
           title="Abrir RN Intelligence"
         >
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             <div className="relative">
               <MessageSquare className="h-4 w-4 text-cyan-500 group-hover:scale-110 transition-transform" />
               <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-cyan-500 animate-ping" />
@@ -210,7 +226,7 @@ export function Sidebar({
             <div className="flex items-center justify-between text-[11px] dark:text-slate-400 text-slate-600 font-mono">
               <span className="flex items-center gap-1.5">
                 <Database className="h-3 w-3 text-emerald-500" />
-                DuckDB OLAP
+                DuckDB OLAP (61k logs)
               </span>
               <span className="text-emerald-500 font-semibold">Online</span>
             </div>

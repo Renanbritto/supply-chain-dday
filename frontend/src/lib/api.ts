@@ -99,6 +99,26 @@ export async function fetchSuppliersSla() {
   return fallbackData.suppliers;
 }
 
+export async function fetchScatterRisk() {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/analytics/scatter`);
+    if (res.ok) return await res.json();
+  } catch {
+    // Fallback local
+  }
+  return (fallbackData as any).scatter;
+}
+
+export async function fetchGeoNetwork() {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/analytics/geo`);
+    if (res.ok) return await res.json();
+  } catch {
+    // Fallback local
+  }
+  return (fallbackData as any).geo;
+}
+
 export async function sendCopilotChat(message: string) {
   try {
     const res = await fetchWithTimeout(`${API_BASE_URL}/api/intelligence/chat`, {

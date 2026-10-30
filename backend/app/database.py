@@ -9,10 +9,19 @@ def get_connection():
     conn = duckdb.connect(str(DB_PATH))
     return conn
 
-def init_db():
+def init_db(force_recreate=False):
     conn = get_connection()
     
-    # 1. Dimensao Fornecedor
+    if force_recreate:
+        conn.execute("DROP TABLE IF EXISTS f_pedidos_compra;")
+        conn.execute("DROP TABLE IF EXISTS f_vendas_movimentacao;")
+        conn.execute("DROP TABLE IF EXISTS f_estoque_diario;")
+        conn.execute("DROP TABLE IF EXISTS d_calendario;")
+        conn.execute("DROP TABLE IF EXISTS d_filial_deposito;")
+        conn.execute("DROP TABLE IF EXISTS d_produto;")
+        conn.execute("DROP TABLE IF EXISTS d_fornecedor;")
+
+    # 1. Dimensao Fornecedor com Geolocalizacao
     conn.execute("""
     CREATE TABLE IF NOT EXISTS d_fornecedor (
         fornecedor_id VARCHAR PRIMARY KEY,
@@ -21,7 +30,11 @@ def init_db():
         lead_time_acordado INTEGER NOT NULL,
         confianca_historica_pct DOUBLE,
         email VARCHAR,
-        categoria_principal VARCHAR
+        categoria_principal VARCHAR,
+        cidade VARCHAR,
+        estado VARCHAR,
+        lat DOUBLE,
+        lng DOUBLE
     );
     """)
 
@@ -42,14 +55,16 @@ def init_db():
     );
     """)
 
-    # 3. Dimensao Filial / Deposito
+    # 3. Dimensao Filial / Deposito com Geolocalizacao
     conn.execute("""
     CREATE TABLE IF NOT EXISTS d_filial_deposito (
         filial_id VARCHAR PRIMARY KEY,
         nome VARCHAR NOT NULL,
         cidade VARCHAR NOT NULL,
         estado VARCHAR NOT NULL,
-        capacidade_paletes INTEGER
+        capacidade_paletes INTEGER,
+        lat DOUBLE,
+        lng DOUBLE
     );
     """)
 
@@ -94,7 +109,7 @@ def init_db():
     );
     """)
 
-    # 7. Fato Pedidos de Compra
+    # 7. Fato Pedidos de Compra com Rota e Modal
     conn.execute("""
     CREATE TABLE IF NOT EXISTS f_pedidos_compra (
         pedido_id VARCHAR PRIMARY KEY,
@@ -108,6 +123,7 @@ def init_db():
         quantidade_entregue INTEGER,
         status VARCHAR NOT NULL,
         lead_time_real INTEGER,
+        modal_transporte VARCHAR,
         entregue_no_prazo BOOLEAN,
         entregue_na_quantidade BOOLEAN,
         otif BOOLEAN

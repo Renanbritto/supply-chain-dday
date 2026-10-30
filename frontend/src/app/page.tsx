@@ -9,11 +9,15 @@ import { AbcChart } from "@/components/dashboard/AbcChart";
 import { SuppliersTable } from "@/components/dashboard/SuppliersTable";
 import { WhatIfSimulator } from "@/components/dashboard/WhatIfSimulator";
 import { CopilotDrawer } from "@/components/rn-intelligence/CopilotDrawer";
+import { RiskScatterPlot } from "@/components/analytics/RiskScatterPlot";
+import { GeoSupplyMap } from "@/components/analytics/GeoSupplyMap";
 import {
   fetchSummary,
   fetchInventory,
   fetchAbcCurve,
   fetchSuppliersSla,
+  fetchScatterRisk,
+  fetchGeoNetwork,
 } from "@/lib/api";
 import { fallbackData } from "@/data/fallbackData";
 import { MessageSquare } from "lucide-react";
@@ -29,6 +33,8 @@ export default function DashboardPage() {
   const [inventoryItems, setInventoryItems] = useState<any[]>(fallbackData.inventory);
   const [abcData, setAbcData] = useState<any>(fallbackData.abc);
   const [suppliersData, setSuppliersData] = useState<any>(fallbackData.suppliers);
+  const [scatterData, setScatterData] = useState<any>(fallbackData.scatter);
+  const [geoData, setGeoData] = useState<any>(fallbackData.geo);
 
   // Filtros da Tabela
   const [selectedCategory, setSelectedCategory] = useState("ALL");
@@ -40,7 +46,7 @@ export default function DashboardPage() {
   const loadAllData = async () => {
     setRefreshing(true);
     try {
-      const [sum, inv, abc, sup] = await Promise.all([
+      const [sum, inv, abc, sup, scat, geo] = await Promise.all([
         fetchSummary(),
         fetchInventory({
           categoria: selectedCategory,
@@ -49,12 +55,16 @@ export default function DashboardPage() {
         }),
         fetchAbcCurve(),
         fetchSuppliersSla(),
+        fetchScatterRisk(),
+        fetchGeoNetwork(),
       ]);
 
       if (sum) setSummary(sum);
       if (inv && inv.items) setInventoryItems(inv.items);
       if (abc) setAbcData(abc);
       if (sup) setSuppliersData(sup);
+      if (scat) setScatterData(scat);
+      if (geo) setGeoData(geo);
     } catch (err) {
       console.error("Erro ao carregar dados da API:", err);
     } finally {
@@ -115,6 +125,19 @@ export default function DashboardPage() {
               onStatusChange={setSelectedStatus}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
+            />
+          )}
+
+          {activeTab === "scatter" && (
+            <RiskScatterPlot
+              data={scatterData}
+              onDiagnoseSku={handleDiagnoseFromTable}
+            />
+          )}
+
+          {activeTab === "geo" && (
+            <GeoSupplyMap
+              data={geoData}
             />
           )}
 
