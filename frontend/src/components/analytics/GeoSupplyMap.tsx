@@ -12,9 +12,8 @@ import {
   Package,
   RotateCcw,
   ArrowRight,
-  ShieldCheck,
-  AlertTriangle,
-  ZoomIn,
+  Layers,
+  Globe2,
 } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import "leaflet/dist/leaflet.css";
@@ -93,6 +92,9 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
   const [selectedHub, setSelectedHub] = useState<string>("ALL");
   const [selectedModal, setSelectedModal] = useState<string>("ALL");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
+  const [mapLayerType, setMapLayerType] = useState<"osm" | "satellite" | "dark">(
+    theme === "dark" ? "dark" : "osm"
+  );
   const [activeRouteInfo, setActiveRouteInfo] = useState<Rota | null>(null);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -112,7 +114,16 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
     valor_total_transito: 3450000.0,
   };
 
-  // Filtragem estrita dos corredores
+  // Sincroniza camada padrao ao alternar entre tema claro e escuro
+  useEffect(() => {
+    if (theme === "dark" && mapLayerType === "osm") {
+      setMapLayerType("dark");
+    } else if (theme === "light" && mapLayerType === "dark") {
+      setMapLayerType("osm");
+    }
+  }, [theme]);
+
+  // Filtragem dos corredores
   const filteredRotas = rotas.filter((r) => {
     if (selectedHub !== "ALL" && r.filial_id !== selectedHub) return false;
     if (selectedModal !== "ALL" && !r.modal.toLowerCase().includes(selectedModal.toLowerCase())) return false;
@@ -137,7 +148,31 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
     }
   };
 
-  // Inicializacao do Leaflet (Somente no Client)
+  const getTileConfig = (type: "osm" | "satellite" | "dark") => {
+    switch (type) {
+      case "satellite":
+        return {
+          url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          attribution: '&copy; Esri World Imagery',
+          maxZoom: 18,
+        };
+      case "dark":
+        return {
+          url: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+          attribution: '&copy; Esri Dark Canvas &mdash; OpenStreetMap',
+          maxZoom: 16,
+        };
+      case "osm":
+      default:
+        return {
+          url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          maxZoom: 19,
+        };
+    }
+  };
+
+  // Inicializacao do Leaflet
   useEffect(() => {
     let isMounted = true;
 
@@ -146,31 +181,35 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
       const L = (await import("leaflet")).default;
 
       if (!mapInstanceRef.current && mapContainerRef.current) {
-        // Centro Geografico do Brasil
+        // Inicializa o mapa com foco total no territorio brasileiro
         const map = L.map(mapContainerRef.current, {
-          center: [-14.5, -53.0],
+          center: [-14.5, -52.0],
           zoom: 4,
           minZoom: 3,
-          maxZoom: 12,
+          maxZoom: 14,
           scrollWheelZoom: true,
           zoomControl: true,
         });
 
-        const tileUrl =
-          theme === "dark"
-            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
-
-        const tileLayer = L.tileLayer(tileUrl, {
-          attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-          subdomains: "abcd",
-          maxZoom: 19,
+        const tileCfg = getTileConfig(mapLayerType);
+        const tileLayer = L.tileLayer(tileCfg.url, {
+          attribution: tileCfg.attribution,
+          maxZoom: tileCfg.maxZoom,
         }).addTo(map);
 
         tileLayerRef.current = tileLayer;
         markersLayerRef.current = L.layerGroup().addTo(map);
         polylinesLayerRef.current = L.layerGroup().addTo(map);
         mapInstanceRef.current = map;
+
+        // Auto-enquadramento preciso do Brasil
+        map.fitBounds(
+          [
+            [-2.5, -61.0], // Norte / Manaus
+            [-30.0, -34.5], // Sul / Recife
+          ],
+          { padding: [35, 35] }
+        );
       }
 
       if (isMounted) {
@@ -185,18 +224,14 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
     };
   }, []);
 
-  // Atualiza TileLayer quando o tema escuro/claro muda
+  // Troca dinamica de camada do mapa
   useEffect(() => {
     if (!mapInstanceRef.current || !tileLayerRef.current) return;
-    const tileUrl =
-      theme === "dark"
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+    const tileCfg = getTileConfig(mapLayerType);
+    tileLayerRef.current.setUrl(tileCfg.url);
+  }, [mapLayerType]);
 
-    tileLayerRef.current.setUrl(tileUrl);
-  }, [theme]);
-
-  // Atualiza Marcadores e Rotas ao mudar filtros
+  // Atualiza Marcadores e Polilinhas ao alterar filtros
   useEffect(() => {
     async function updateFeatures() {
       if (typeof window === "undefined" || !mapInstanceRef.current) return;
@@ -204,7 +239,7 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
       renderMapFeatures(L);
     }
     updateFeatures();
-  }, [selectedHub, selectedModal, selectedStatus, filteredRotas.length]);
+  }, [selectedHub, selectedModal, selectedStatus, filteredRotas.length, mapLayerType]);
 
   const renderMapFeatures = (L: any) => {
     const map = mapInstanceRef.current;
@@ -213,7 +248,7 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
     markersLayerRef.current.clearLayers();
     polylinesLayerRef.current.clearLayers();
 
-    // 1. Renderiza Rotas (Polilinhas)
+    // 1. Polilinhas dos Corredores Logísticos
     filteredRotas.forEach((rota) => {
       const color = getRouteColor(rota.status_rota);
       const isSelected = activeRouteInfo?.rota_id === rota.rota_id;
@@ -226,14 +261,14 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
         {
           color,
           weight: isSelected ? 4.5 : Math.min(3.5, Math.max(1.8, rota.volume_unidades / 400)),
-          opacity: isSelected ? 1 : 0.65,
+          opacity: isSelected ? 1 : 0.7,
           dashArray: rota.modal === "AEREO" ? "6, 6" : rota.modal === "CABOTAGEM" ? "8, 4" : undefined,
         }
       );
 
       polyline.bindTooltip(
         `
-        <div style="font-family:'Comfortaa', sans-serif; padding:2px; font-size:11px;">
+        <div style="font-family:'Comfortaa', sans-serif; padding:3px; font-size:11px;">
           <div style="font-weight:700; color:#06B6D4;">${rota.rota_id} • ${rota.modal}</div>
           <div style="margin-top:2px;"><strong>Origem:</strong> ${rota.fornecedor_nome} (${rota.origem.cidade}/${rota.origem.estado})</div>
           <div><strong>Destino:</strong> ${rota.filial_nome}</div>
@@ -251,46 +286,43 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
       polyline.addTo(polylinesLayerRef.current);
     });
 
-    // 2. Renderiza Fabricas / Fornecedores
+    // 2. Polos Fabris / Fornecedores (Marcadores circulares limpos e discretos)
     fornecedores.forEach((forn) => {
-      const isDark = theme === "dark";
       const factoryIcon = L.divIcon({
-        className: "custom-factory-marker",
+        className: "custom-factory-dot",
         html: `
-          <div style="display:flex; flex-direction:column; align-items:center; transform: translate(-50%, -100%);">
-            <div style="background:${isDark ? "#1E293B" : "#F8FAFC"}; color:${isDark ? "#CBD5E1" : "#334155"}; border:1px solid #3B82F6; border-radius:4px; padding:2px 5px; font-weight:600; font-size:9px; font-family:monospace; box-shadow:0 2px 6px rgba(0,0,0,0.3); white-space:nowrap;">
-              ${forn.cidade}/${forn.estado}
-            </div>
-            <div style="width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; border-top:4px solid #3B82F6;"></div>
-          </div>
+          <div style="width:12px; height:12px; border-radius:50%; background:#2563EB; border:2px solid #FFFFFF; box-shadow:0 0 6px rgba(37,99,235,0.8); cursor:pointer;"></div>
         `,
-        iconSize: [0, 0],
+        iconSize: [12, 12],
+        iconAnchor: [6, 6],
       });
 
       const marker = L.marker([forn.lat, forn.lng], { icon: factoryIcon });
       marker.bindTooltip(
         `
-        <div style="font-family:'Comfortaa', sans-serif; font-size:11px;">
-          <div style="font-weight:700; color:#3B82F6;">${forn.nome}</div>
+        <div style="font-family:'Comfortaa', sans-serif; font-size:11px; padding:2px;">
+          <div style="font-weight:700; color:#3B82F6;">Fabrica: ${forn.nome}</div>
           <div>${forn.cidade}/${forn.estado} • ${forn.categoria}</div>
           <div>Lead time acordado: ${forn.lead_time_acordado} dias</div>
           <div>Confiabilidade SLA: ${forn.confianca_pct}%</div>
+          <div style="color:#06B6D4; font-weight:600; margin-top:2px;">${forn.remessas_em_transito} remessas ativas</div>
         </div>
-        `
+        `,
+        { direction: "top", offset: [0, -6] }
       );
       marker.addTo(markersLayerRef.current);
     });
 
-    // 3. Renderiza Centros de Distribuicao (Hubs)
+    // 3. Centros de Distribuição (Hubs - Badges Executivos Destacados)
     hubs.forEach((hub) => {
-      const isDark = theme === "dark";
       const isSelected = selectedHub === hub.id;
+      const isDark = theme === "dark" || mapLayerType === "satellite" || mapLayerType === "dark";
 
       const hubIcon = L.divIcon({
         className: "custom-hub-marker",
         html: `
           <div style="display:flex; flex-direction:column; align-items:center; transform: translate(-50%, -100%); cursor:pointer;">
-            <div style="background:${isDark ? (isSelected ? "#083344" : "#0F172A") : (isSelected ? "#E0F2FE" : "#FFFFFF")}; color:${isDark ? "#FFFFFF" : "#0F172A"}; border:2px solid ${isSelected ? "#38BDF8" : "#06B6D4"}; border-radius:6px; padding:3px 7px; font-weight:700; font-size:11px; font-family:monospace; box-shadow:0 4px 14px rgba(6,182,212,0.4); display:flex; align-items:center; gap:5px; white-space:nowrap;">
+            <div style="background:${isDark ? (isSelected ? "#083344" : "#0F172A") : (isSelected ? "#E0F2FE" : "#FFFFFF")}; color:${isDark ? "#FFFFFF" : "#0F172A"}; border:2px solid ${isSelected ? "#38BDF8" : "#06B6D4"}; border-radius:6px; padding:3px 7px; font-weight:700; font-size:11px; font-family:monospace; box-shadow:0 4px 14px rgba(6,182,212,0.45); display:flex; align-items:center; gap:5px; white-space:nowrap;">
               <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:${hub.rupturas_locais > 0 ? '#EF4444' : '#10B981'};"></span>
               ${hub.id}
             </div>
@@ -326,7 +358,13 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
 
   const handleResetView = () => {
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.flyTo([-14.5, -53.0], 4, { duration: 1.2 });
+      mapInstanceRef.current.fitBounds(
+        [
+          [-2.5, -61.0],
+          [-30.0, -34.5],
+        ],
+        { padding: [35, 35], duration: 1.2 }
+      );
       setSelectedHub("ALL");
       setSelectedModal("ALL");
       setSelectedStatus("ALL");
@@ -413,7 +451,7 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Painel do Mapa */}
         <div className="lg:col-span-3 obsidian-card p-5 rounded-xl relative overflow-hidden transition-all flex flex-col justify-between">
-          {/* Header de Filtros Operacionais */}
+          {/* Header de Filtros Operacionais e Selecao de Camada */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b dark:border-white/10 border-slate-200 z-10">
             <div>
               <h3 className="text-sm font-bold dark:text-white text-slate-900 flex items-center gap-2">
@@ -426,6 +464,44 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              {/* Seletor de Camada Cartográfica Oficial */}
+              <div className="flex items-center rounded-lg border dark:border-white/10 border-slate-300 dark:bg-obsidian-850 bg-white p-0.5">
+                <button
+                  onClick={() => setMapLayerType("dark")}
+                  className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                    mapLayerType === "dark"
+                      ? "bg-cyan-600 text-white font-medium"
+                      : "dark:text-slate-400 text-slate-600 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                  title="Modo Noturno (Esri Dark Canvas)"
+                >
+                  Noturno
+                </button>
+                <button
+                  onClick={() => setMapLayerType("osm")}
+                  className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                    mapLayerType === "osm"
+                      ? "bg-cyan-600 text-white font-medium"
+                      : "dark:text-slate-400 text-slate-600 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                  title="Mapa Padrão OpenStreetMap"
+                >
+                  Padrao
+                </button>
+                <button
+                  onClick={() => setMapLayerType("satellite")}
+                  className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                    mapLayerType === "satellite"
+                      ? "bg-cyan-600 text-white font-medium"
+                      : "dark:text-slate-400 text-slate-600 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                  title="Satelite de Alta Definicao (Esri Imagery)"
+                >
+                  Satelite
+                </button>
+              </div>
+
+              {/* Filtro por Hub */}
               <select
                 value={selectedHub}
                 onChange={(e) => setSelectedHub(e.target.value)}
@@ -439,6 +515,7 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
                 ))}
               </select>
 
+              {/* Filtro por Modal */}
               <select
                 value={selectedModal}
                 onChange={(e) => setSelectedModal(e.target.value)}
@@ -450,6 +527,7 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
                 <option value="Cabotagem">Cabotagem Maritima</option>
               </select>
 
+              {/* Filtro por Status */}
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
@@ -461,30 +539,31 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
                 <option value="CRITICAL">Atraso Critico</option>
               </select>
 
+              {/* Resetar Enquadramento */}
               <button
                 onClick={handleResetView}
                 className="flex items-center gap-1 text-xs py-1.5 px-3 rounded-lg dark:bg-obsidian-850 bg-slate-100 hover:bg-slate-200 dark:hover:bg-obsidian-800 border dark:border-white/10 border-slate-300 transition-colors dark:text-slate-300 text-slate-700"
-                title="Resetar visao para o Brasil"
+                title="Enquadrar territorio brasileiro"
               >
                 <RotateCcw className="h-3 w-3" />
-                <span className="hidden sm:inline">Visao Brasil</span>
+                <span className="hidden sm:inline">Enquadrar Brasil</span>
               </button>
             </div>
           </div>
 
           {/* Container do Mapa Real Leaflet */}
-          <div className="w-full h-[500px] my-3 rounded-lg overflow-hidden border dark:border-white/10 border-slate-200 relative z-0">
+          <div className="w-full h-[510px] my-3 rounded-lg overflow-hidden border dark:border-white/10 border-slate-200 relative z-0">
             <div ref={mapContainerRef} className="w-full h-full" />
           </div>
 
-          {/* Legenda Informativa Limpa (Sem bolinhas de animacao) */}
+          {/* Legenda Informativa */}
           <div className="flex flex-wrap items-center justify-between text-[11px] font-mono dark:text-slate-400 text-slate-600 pt-3 border-t dark:border-white/10 border-slate-200">
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5">
                 <span className="h-3 w-3 rounded-sm bg-cyan-500" /> Centros de Distribuicao (Hubs)
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-sm bg-blue-500" /> Polos Fabris / Fornecedores
+                <span className="h-2.5 w-2.5 rounded-full bg-blue-600 border border-white" /> Polos Fabris / Fornecedores
               </span>
             </div>
             <div className="flex items-center gap-3">
@@ -553,14 +632,17 @@ export function GeoSupplyMap({ data }: GeoSupplyMapProps) {
               Corredores em Transito ({filteredRotas.length})
             </h4>
 
-            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
               {filteredRotas.slice(0, 8).map((rota) => (
                 <div
                   key={rota.rota_id}
                   onClick={() => {
                     setActiveRouteInfo(rota);
                     if (mapInstanceRef.current) {
-                      mapInstanceRef.current.flyTo([(rota.origem.lat + rota.destino.lat) / 2, (rota.origem.lng + rota.destino.lng) / 2], 5);
+                      mapInstanceRef.current.flyTo(
+                        [(rota.origem.lat + rota.destino.lat) / 2, (rota.origem.lng + rota.destino.lng) / 2],
+                        5
+                      );
                     }
                   }}
                   className={`p-2 rounded-lg text-[11px] border transition-all cursor-pointer ${
