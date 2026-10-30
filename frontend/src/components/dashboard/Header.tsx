@@ -25,9 +25,6 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
                   Motor D-Day
                 </span>
               </h1>
-              <p className="text-xs dark:text-slate-400 text-slate-500 mt-0.5">
-                Modelagem Star Schema em DuckDB + RN Intelligence Integrado
-              </p>
             </div>
           </div>
         </div>
