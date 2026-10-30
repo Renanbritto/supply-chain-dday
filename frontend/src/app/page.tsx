@@ -15,7 +15,7 @@ import {
   fetchAbcCurve,
   fetchSuppliersSla,
 } from "@/lib/api";
-import { Sparkles } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<NavTab>("inventory");
@@ -138,7 +138,7 @@ export default function DashboardPage() {
         </main>
       </div>
 
-      {/* Floating Action Button para o Copilot no canto inferior direito */}
+      {/* Floating Action Button no canto inferior direito */}
       <div className="fixed bottom-6 right-6 z-30">
         <button
           onClick={() => {
@@ -147,8 +147,8 @@ export default function DashboardPage() {
           }}
           className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-medium text-xs shadow-[0_0_25px_rgba(6,182,212,0.4)] hover:shadow-[0_0_35px_rgba(6,182,212,0.6)] hover:scale-105 transition-all"
         >
-          <Sparkles className="h-4 w-4" />
-          <span>RN Intelligence Copilot</span>
+          <MessageSquare className="h-4 w-4" />
+          <span>RN Intelligence</span>
         </button>
       </div>
 

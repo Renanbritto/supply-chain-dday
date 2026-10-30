@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { X, Send, Sparkles, Bot, User, CornerDownLeft, RotateCcw } from "lucide-react";
+import { X, Send, MessageSquare, Bot, User, CornerDownLeft, RotateCcw } from "lucide-react";
 import { sendCopilotChat } from "@/lib/api";
 
 interface Message {
@@ -26,7 +26,7 @@ export function CopilotDrawer({
     {
       id: "1",
       sender: "copilot",
-      content: `### RN Intelligence Copilot Ativo
+      content: `### RN Intelligence Ativo
 
 Sou o assistente de inteligencia contextual do ecossistema de Supply Chain.
 
@@ -106,7 +106,7 @@ Selecione uma das sugestoes rapidas abaixo ou digite sua consulta.`,
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-              <Sparkles className="h-4 w-4" />
+              <MessageSquare className="h-4 w-4" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -114,7 +114,7 @@ Selecione uma das sugestoes rapidas abaixo ou digite sua consulta.`,
                 <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
               </h3>
               <p className="text-[11px] text-slate-400 font-mono">
-                Copilot Analitico de Decisao
+                Assistente Analitico de Decisao
               </p>
             </div>
           </div>

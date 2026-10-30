@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Sparkles, ExternalLink, RefreshCw, Layers } from "lucide-react";
+import { MessageSquare, ExternalLink, RefreshCw, Layers } from "lucide-react";
 
 interface HeaderProps {
   onOpenCopilot: () => void;
@@ -26,7 +26,7 @@ export function Header({ onOpenCopilot, onRefresh, isRefreshing }: HeaderProps) 
                 </span>
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
-                Modelagem Star Schema em DuckDB + RN Intelligence Copilot Integrado
+                Modelagem Star Schema em DuckDB + RN Intelligence Integrado
               </p>
             </div>
           </div>
@@ -61,7 +61,7 @@ export function Header({ onOpenCopilot, onRefresh, isRefreshing }: HeaderProps) 
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
             </span>
-            <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+            <MessageSquare className="h-3.5 w-3.5 text-cyan-400" />
             <span>RN Intelligence</span>
           </button>
         </div>

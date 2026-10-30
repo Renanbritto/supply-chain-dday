@@ -6,7 +6,7 @@ import {
   BarChart3,
   Truck,
   Sliders,
-  Sparkles,
+  MessageSquare,
   ChevronLeft,
   ChevronRight,
   Layers,
@@ -173,17 +173,17 @@ export function Sidebar({
           <div className="h-px bg-white/10" />
         </div>
 
-        {/* Atalho RN Intelligence Copilot */}
+        {/* Atalho RN Intelligence */}
         <button
           onClick={onOpenCopilot}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all group relative bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-transparent border border-cyan-500/30 hover:border-cyan-400/60 text-slate-200 hover:text-white ${
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all group relative bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-transparent border border-cyan-500/30 hover:border-cyan-400/60 text-slate-200 hover:text-white ${
             isCollapsed ? "justify-center" : "justify-between"
           }`}
-          title="Abrir RN Intelligence Copilot"
+          title="Abrir RN Intelligence"
         >
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative">
-              <Sparkles className="h-4 w-4 text-cyan-400 group-hover:rotate-12 transition-transform" />
+              <MessageSquare className="h-4 w-4 text-cyan-400 group-hover:scale-110 transition-transform" />
               <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping" />
             </div>
             {!isCollapsed && (
@@ -192,7 +192,7 @@ export function Sidebar({
           </div>
           {!isCollapsed && (
             <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-cyan-400/20 text-cyan-200 border border-cyan-400/30">
-              Copilot
+              Chat
             </span>
           )}
         </button>
