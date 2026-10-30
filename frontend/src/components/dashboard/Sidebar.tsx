@@ -197,23 +197,22 @@ export function Sidebar({
         {/* Atalho RN Intelligence */}
         <button
           onClick={onOpenCopilot}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all group relative dark:bg-gradient-to-r dark:from-cyan-500/10 dark:via-blue-500/10 dark:to-transparent bg-cyan-50/80 border dark:border-cyan-500/30 border-cyan-200 hover:border-cyan-400/60 dark:text-slate-200 text-slate-800 hover:text-slate-900 ${
+          className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium text-white transition-all shadow-md hover:shadow-cyan-500/25 hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 group ${
             isCollapsed ? "justify-center" : "justify-between"
           }`}
           title="Abrir RN Intelligence"
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="relative">
-              <MessageSquare className="h-4 w-4 text-cyan-500 group-hover:scale-110 transition-transform" />
-              <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-cyan-500 animate-ping" />
+            <div className="h-6 w-6 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+              <MessageSquare className="h-3.5 w-3.5 text-white" />
             </div>
             {!isCollapsed && (
-              <span className="font-semibold text-cyan-700 dark:text-cyan-300">RN Intelligence</span>
+              <span className="font-semibold text-white tracking-wide truncate">RN Intelligence</span>
             )}
           </div>
           {!isCollapsed && (
-            <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded dark:bg-cyan-400/20 bg-cyan-200/70 dark:text-cyan-200 text-cyan-900 border dark:border-cyan-400/30 border-cyan-300">
-              Chat
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-white/20 text-white shrink-0">
+              IA
             </span>
           )}
         </button>
@@ -223,12 +222,15 @@ export function Sidebar({
       <div className="p-3 border-t dark:border-white/10 border-slate-200/80 dark:bg-obsidian-900/60 bg-slate-50/80 space-y-2">
         {!isCollapsed ? (
           <>
-            <div className="flex items-center justify-between text-[11px] dark:text-slate-400 text-slate-600 font-mono">
-              <span className="flex items-center gap-1.5">
-                <Database className="h-3 w-3 text-emerald-500" />
-                DuckDB OLAP (61k logs)
+            <div className="flex items-center justify-between text-[11px] font-mono">
+              <span className="flex items-center gap-1.5 dark:text-slate-300 text-slate-700 min-w-0 truncate">
+                <Database className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                <span className="truncate font-medium">DuckDB OLAP</span>
               </span>
-              <span className="text-emerald-500 font-semibold">Online</span>
+              <span className="flex items-center gap-1 text-[10px] text-emerald-500 font-bold shrink-0 ml-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Online</span>
+              </span>
             </div>
 
             <div className="flex items-center justify-between pt-1 border-t dark:border-white/5 border-slate-200">
