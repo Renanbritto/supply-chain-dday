@@ -11,7 +11,6 @@ import { LayoutGrid,
   MessageSquare,
   ChevronLeft,
   ChevronRight,
-  Database,
   ExternalLink,
   Sun,
   Moon,
@@ -215,54 +214,41 @@ export function Sidebar({
       </nav>
 
       {/* Sidebar Footer */}
-      <div className="p-3 border-t dark:border-white/10 border-slate-200/80 dark:bg-obsidian-900/60 bg-slate-50/80 space-y-2">
+      <div className="p-3 border-t dark:border-white/10 border-slate-200/80 dark:bg-obsidian-900/60 bg-slate-50/80 ">
         {!isCollapsed ? (
-          <>
-            <div className="flex items-center justify-between text-[11px] font-mono">
-              <span className="flex items-center gap-1.5 dark:text-slate-300 text-slate-700 min-w-0 truncate">
-                <Database className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                <span className="truncate font-medium">DuckDB OLAP</span>
-              </span>
-              <span className="flex items-center gap-1 text-[10px] text-emerald-500 font-bold shrink-0 ml-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Online</span>
-              </span>
-            </div>
+          <div className="flex items-center justify-between">
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-1.5 text-[10px] dark:text-slate-400 text-slate-600 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+              title="Alternar tema"
+            >
+              {theme === "dark" ? (
+                <>
+                  <Sun className="h-3 w-3 text-amber-400" />
+                  <span>Modo Claro</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="h-3 w-3 text-indigo-600" />
+                  <span>Modo Escuro</span>
+                </>
+              )}
+            </button>
 
-            <div className="flex items-center justify-between pt-1 border-t dark:border-white/5 border-slate-200">
-              <button
-                onClick={toggleTheme}
-                className="flex items-center gap-1.5 text-[10px] dark:text-slate-400 text-slate-600 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
-                title="Alternar tema"
-              >
-                {theme === "dark" ? (
-                  <>
-                    <Sun className="h-3 w-3 text-amber-400" />
-                    <span>Modo Claro</span>
-                  </>
-                ) : (
-                  <>
-                    <Moon className="h-3 w-3 text-indigo-600" />
-                    <span>Modo Escuro</span>
-                  </>
-                )}
-              </button>
-
-              <a
-                href="https://github.com/Renanbritto/supply-chain-dday"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-[10px] dark:text-slate-400 text-slate-600 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
-                title="Repositório no GitHub"
-              >
-                <Github className="h-3 w-3" />
-                <span>GitHub</span>
-                <ExternalLink className="h-2 w-2 opacity-60" />
-              </a>
-            </div>
-          </>
+            <a
+              href="https://github.com/Renanbritto/supply-chain-dday"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-[10px] dark:text-slate-400 text-slate-600 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+              title="Repositório no GitHub"
+            >
+              <Github className="h-3 w-3" />
+              <span>GitHub</span>
+              <ExternalLink className="h-2 w-2 opacity-60" />
+            </a>
+          </div>
         ) : (
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center">
             <button
               onClick={toggleTheme}
               className="p-1 rounded text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors"
@@ -274,7 +260,6 @@ export function Sidebar({
                 <Moon className="h-3.5 w-3.5 text-indigo-600" />
               )}
             </button>
-            <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(52,211,153,0.8)]" title="DuckDB Online" />
           </div>
         )}
       </div>
