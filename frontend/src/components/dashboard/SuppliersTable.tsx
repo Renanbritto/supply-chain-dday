@@ -66,57 +66,57 @@ export function SuppliersTable({ suppliers, otifGlobal }: SuppliersTableProps) {
       </div>
 
       {/* Tabela de Fornecedores */}
-      <div className="obsidian-card rounded-xl overflow-hidden transition-all">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs dark:text-slate-300 text-slate-700">
+      <div className="obsidian-card rounded-xl overflow-hidden transition-all shadow-lg">
+        <div className="overflow-x-auto custom-horizontal-scrollbar pb-2">
+          <table className="w-full min-w-[980px] text-left text-xs dark:text-slate-300 text-slate-700">
             <thead className="dark:bg-obsidian-900/90 bg-slate-100/90 dark:text-slate-400 text-slate-600 uppercase tracking-wider font-mono text-[10px] border-b dark:border-white/10 border-slate-200">
               <tr>
-                <th className="py-3 px-4">Fornecedor</th>
-                <th className="py-3 px-4">Categoria Principal</th>
-                <th className="py-3 px-4 text-center">LT Acordado</th>
-                <th className="py-3 px-4 text-center">LT Real Medio</th>
-                <th className="py-3 px-4 text-center">Desvio (Gap)</th>
-                <th className="py-3 px-4 text-center">On-Time %</th>
-                <th className="py-3 px-4 text-center">In-Full %</th>
-                <th className="py-3 px-4 text-center">OTIF %</th>
-                <th className="py-3 px-4 text-center">Status SLA</th>
-                <th className="py-3 px-4 text-right">Pedidos</th>
+                <th className="py-3.5 pl-6 pr-4 whitespace-nowrap min-w-[200px]">Fornecedor</th>
+                <th className="py-3.5 px-4 whitespace-nowrap min-w-[160px]">Categoria Principal</th>
+                <th className="py-3.5 px-4 text-center whitespace-nowrap min-w-[110px]">LT Acordado</th>
+                <th className="py-3.5 px-4 text-center whitespace-nowrap min-w-[110px]">LT Real Medio</th>
+                <th className="py-3.5 px-4 text-center whitespace-nowrap min-w-[110px]">Desvio (Gap)</th>
+                <th className="py-3.5 px-4 text-center whitespace-nowrap min-w-[110px]">On-Time %</th>
+                <th className="py-3.5 px-4 text-center whitespace-nowrap min-w-[110px]">In-Full %</th>
+                <th className="py-3.5 px-4 text-center whitespace-nowrap min-w-[110px]">OTIF %</th>
+                <th className="py-3.5 px-4 text-center whitespace-nowrap min-w-[130px]">Status SLA</th>
+                <th className="py-3.5 pl-4 pr-6 text-right whitespace-nowrap min-w-[120px]">Pedidos</th>
               </tr>
             </thead>
             <tbody className="divide-y dark:divide-white/5 divide-slate-200/70 font-sans">
               {suppliers.map((f) => (
                 <tr key={f.fornecedor_id} className="dark:hover:bg-white/[0.03] hover:bg-slate-100/60 transition-colors">
-                  <td className="py-3 px-4">
+                  <td className="py-3.5 pl-6 pr-4">
                     <div className="dark:text-white text-slate-900 font-medium">{f.nome}</div>
                     <div className="font-mono text-[10px] text-slate-500">{f.fornecedor_id}</div>
                   </td>
-                  <td className="py-3 px-4 dark:text-slate-300 text-slate-700">{f.categoria}</td>
-                  <td className="py-3 px-4 text-center font-mono dark:text-slate-400 text-slate-500">
+                  <td className="py-3.5 px-4 dark:text-slate-300 text-slate-700">{f.categoria}</td>
+                  <td className="py-3.5 px-4 text-center font-mono dark:text-slate-400 text-slate-500">
                     {f.lead_time_acordado}d
                   </td>
-                  <td className="py-3 px-4 text-center font-mono dark:text-white text-slate-900 font-medium">
+                  <td className="py-3.5 px-4 text-center font-mono dark:text-white text-slate-900 font-medium">
                     {f.lead_time_real}d
                   </td>
-                  <td className="py-3 px-4 text-center font-mono">
+                  <td className="py-3.5 px-4 text-center font-mono">
                     <span className={f.gap_lead_time_dias > 2 ? "text-red-500 font-bold" : f.gap_lead_time_dias > 0 ? "text-amber-500 font-medium" : "text-emerald-500 font-medium"}>
                       {f.gap_lead_time_dias > 0 ? `+${f.gap_lead_time_dias}d` : "No Prazo"}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-center font-mono dark:text-slate-300 text-slate-700">
+                  <td className="py-3.5 px-4 text-center font-mono dark:text-slate-300 text-slate-700">
                     {f.on_time_pct.toFixed(1)}%
                   </td>
-                  <td className="py-3 px-4 text-center font-mono dark:text-slate-300 text-slate-700">
+                  <td className="py-3.5 px-4 text-center font-mono dark:text-slate-300 text-slate-700">
                     {f.in_full_pct.toFixed(1)}%
                   </td>
-                  <td className="py-3 px-4 text-center font-mono">
+                  <td className="py-3.5 px-4 text-center font-mono">
                     <span className={`font-semibold ${f.otif_pct >= 90 ? "text-emerald-500" : f.otif_pct >= 80 ? "text-amber-500" : "text-red-500"}`}>
                       {f.otif_pct.toFixed(1)}%
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-center">
+                  <td className="py-3.5 px-4 text-center">
                     {getSlaBadge(f.status_sla)}
                   </td>
-                  <td className="py-3 px-4 text-right font-mono dark:text-slate-300 text-slate-700">
+                  <td className="py-3.5 pl-4 pr-6 text-right font-mono dark:text-slate-300 text-slate-700">
                     <div>{f.pedidos_entregues} entregues</div>
                     {f.pedidos_em_transito > 0 && (
                       <div className="text-[10px] text-cyan-600 dark:text-cyan-400">
