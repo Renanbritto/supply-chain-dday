@@ -15,6 +15,7 @@ import {
   fetchAbcCurve,
   fetchSuppliersSla,
 } from "@/lib/api";
+import { fallbackData } from "@/data/fallbackData";
 import { MessageSquare } from "lucide-react";
 
 export default function DashboardPage() {
@@ -23,17 +24,17 @@ export default function DashboardPage() {
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [diagnoseSku, setDiagnoseSku] = useState<string | null>(null);
 
-  // Estados dos Dados
-  const [summary, setSummary] = useState<any>({});
-  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
-  const [abcData, setAbcData] = useState<any>({ items: [], totais: {}, resumo: {} });
-  const [suppliersData, setSuppliersData] = useState<any>({ fornecedores: [], otif_global: 0 });
+  // Estados dos Dados - Inicializados diretamente com a base DuckDB
+  const [summary, setSummary] = useState<any>(fallbackData.summary);
+  const [inventoryItems, setInventoryItems] = useState<any[]>(fallbackData.inventory);
+  const [abcData, setAbcData] = useState<any>(fallbackData.abc);
+  const [suppliersData, setSuppliersData] = useState<any>(fallbackData.suppliers);
 
   // Filtros da Tabela
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [selectedStatus, setSelectedStatus] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadAllData = async () => {
@@ -50,10 +51,10 @@ export default function DashboardPage() {
         fetchSuppliersSla(),
       ]);
 
-      setSummary(sum);
-      setInventoryItems(inv.items || []);
-      setAbcData(abc);
-      setSuppliersData(sup);
+      if (sum) setSummary(sum);
+      if (inv && inv.items) setInventoryItems(inv.items);
+      if (abc) setAbcData(abc);
+      if (sup) setSuppliersData(sup);
     } catch (err) {
       console.error("Erro ao carregar dados da API:", err);
     } finally {
