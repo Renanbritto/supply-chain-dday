@@ -73,7 +73,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-obsidian-950 text-slate-100">
+    <div className="min-h-screen flex dark:bg-obsidian-950 bg-slate-50/70 dark:text-slate-100 text-slate-800 transition-colors">
       {/* Menu Retrátil à Esquerda */}
       <Sidebar
         activeTab={activeTab}
@@ -146,7 +146,7 @@ export default function DashboardPage() {
             setDiagnoseSku(null);
             setIsCopilotOpen(true);
           }}
-          className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-medium text-xs shadow-[0_0_25px_rgba(6,182,212,0.4)] hover:shadow-[0_0_35px_rgba(6,182,212,0.6)] hover:scale-105 transition-all"
+          className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-medium text-xs shadow-lg hover:shadow-cyan-500/25 hover:scale-105 transition-all"
         >
           <MessageSquare className="h-4 w-4" />
           <span>RN Intelligence</span>
