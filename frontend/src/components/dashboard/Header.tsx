@@ -1,16 +1,16 @@
 "use client";
 
 import React from "react";
-import { MessageSquare, ExternalLink, RefreshCw, Layers, Github } from "lucide-react";
+import { ExternalLink, RefreshCw, Layers, Github } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 interface HeaderProps {
-  onOpenCopilot: () => void;
+  onOpenCopilot?: () => void;
   onRefresh: () => void;
   isRefreshing: boolean;
 }
 
-export function Header({ onOpenCopilot, onRefresh, isRefreshing }: HeaderProps) {
+export function Header({ onRefresh, isRefreshing }: HeaderProps) {
   return (
     <header className="border-b dark:border-white/10 border-slate-200/80 dark:bg-obsidian-950/80 bg-white/80 backdrop-blur-xl sticky top-0 z-40 px-6 py-4 transition-colors">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -57,18 +57,6 @@ export function Header({ onOpenCopilot, onRefresh, isRefreshing }: HeaderProps) 
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
             <span className="hidden sm:inline">Atualizar</span>
-          </button>
-
-          <button
-            onClick={onOpenCopilot}
-            className="relative flex items-center gap-2 text-xs font-medium text-white px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 shadow-sm hover:shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-300 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-200"></span>
-            </span>
-            <MessageSquare className="h-3.5 w-3.5" />
-            <span>RN Intelligence</span>
           </button>
         </div>
       </div>
