@@ -10,6 +10,7 @@ import { SuppliersTable } from "@/components/dashboard/SuppliersTable";
 import { WhatIfSimulator } from "@/components/dashboard/WhatIfSimulator";
 import { CopilotDrawer } from "@/components/rn-intelligence/CopilotDrawer";
 import { RiskScatterPlot } from "@/components/analytics/RiskScatterPlot";
+import { PageNavigator } from "@/components/dashboard/PageNavigator";
 import dynamic from "next/dynamic";
 
 const GeoSupplyMap = dynamic(
@@ -36,6 +37,7 @@ import { fallbackData } from "@/data/fallbackData";
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<NavTab>("inventory");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [diagnoseSku, setDiagnoseSku] = useState<string | null>(null);
 
@@ -95,12 +97,14 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen flex dark:bg-obsidian-950 bg-slate-50/70 dark:text-slate-100 text-slate-800 transition-colors">
-      {/* Menu Retrátil à Esquerda */}
+      {/* Menu Retrátil à Esquerda (Drawer no mobile, Fixo/Recolhível no desktop) */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         isCollapsed={isSidebarCollapsed}
         setIsCollapsed={setIsSidebarCollapsed}
+        isMobileOpen={isMobileSidebarOpen}
+        setIsMobileOpen={setIsMobileSidebarOpen}
         inventoryCount={inventoryItems.length}
         suppliersCount={suppliersData.fornecedores?.length || 0}
         onOpenCopilot={() => {
@@ -111,10 +115,14 @@ export default function DashboardPage() {
 
       {/* Área Principal de Conteúdo */}
       <div className="flex-1 flex flex-col min-w-0 pb-16">
-        {/* Header Fixo */}
-        <Header onRefresh={loadAllData} isRefreshing={refreshing} />
+        {/* Header Fixo com Botão Hamburger no Mobile */}
+        <Header
+          onRefresh={loadAllData}
+          isRefreshing={refreshing}
+          onToggleMobileMenu={() => setIsMobileSidebarOpen((prev) => !prev)}
+        />
 
-        <main className="max-w-7xl mx-auto px-6 pt-6 w-full space-y-6">
+        <main className="max-w-7xl mx-auto px-3.5 sm:px-6 pt-4 sm:pt-6 w-full space-y-6">
           {/* Cards de KPIs Principais */}
           <KpiCards summary={summary} />
 
@@ -163,6 +171,9 @@ export default function DashboardPage() {
               }))}
             />
           )}
+
+          {/* Navegador de Próxima Página ao Final do Conteúdo */}
+          <PageNavigator activeTab={activeTab} onNavigate={setActiveTab} />
         </main>
       </div>
 
